@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "exercise-mobile-app",
-    "slug": "exercise-mobile-app",
+    "slug": "exercise-app-1",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,10 +21,17 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.guiosouza.exerciseapp1"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "61f2c672-bbec-43be-a644-e63836eaa342"
+      }
+    },
+    "owner": "guiosouza"
   }
 }
