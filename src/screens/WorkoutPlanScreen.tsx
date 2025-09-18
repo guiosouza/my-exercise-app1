@@ -12,7 +12,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { theme } from '../styles/theme';
 import { ExerciseOption, WorkoutPlan } from '../types';
-import { getExercises, insertWorkoutPlan, getWorkoutPlans, insertExercise, updateExercise } from '../database/database';
+import { getExercises, insertWorkoutPlan, getWorkoutPlans, insertExercise, updateExercise, deleteExercise } from '../database/database';
 
 const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
@@ -174,6 +174,33 @@ export default function WorkoutPlanScreen() {
     }
   };
 
+  const handleDeleteExercise = (exercise: ExerciseOption) => {
+    Alert.alert(
+      'Confirmar Exclusão',
+      `Tem certeza que deseja deletar o exercício "${exercise.label}"?\n\nEsta ação irá remover:\n• O exercício\n• Todos os registros de treino\n• Todos os planos de treino\n\nEsta ação não pode ser desfeita.`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Deletar',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteExercise(exercise.id!);
+              Alert.alert('Sucesso', 'Exercício deletado com sucesso!');
+              loadData();
+            } catch (error) {
+              Alert.alert('Erro', 'Erro ao deletar exercício');
+              console.error(error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const getWorkoutsByDay = (day: string) => {
     return workoutPlans.filter(plan => plan.dayOfWeek === day);
   };
@@ -215,7 +242,15 @@ export default function WorkoutPlanScreen() {
                   {exercise.description || 'Sem descrição'}
                 </Text>
               </View>
-              <Text style={styles.editText}>Toque para editar</Text>
+              <View style={styles.exerciseCardActions}>
+                <Text style={styles.editText}>Toque para editar</Text>
+                <TouchableOpacity 
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteExercise(exercise)}
+                >
+                  <Text style={styles.deleteButtonText}>🗑️</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -761,5 +796,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: theme.spacing.xs, // Pequeno espaçamento do conteúdo acima
     paddingTop: theme.spacing.xs, // Padding interno para melhor visual
+    flex: 1,
+  },
+  exerciseCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: theme.spacing.xs,
+  },
+  deleteButton: {
+    backgroundColor: '#ff4444',
+    borderRadius: theme.borderRadius.sm,
+    padding: 4,
+    marginLeft: theme.spacing.xs,
+  },
+  deleteButtonText: {
+    fontSize: 12,
+    color: 'white',
   },
 });

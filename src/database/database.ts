@@ -362,6 +362,56 @@ export const importExerciseRecords = (records: ExerciseRecord[]) => {
   }
 };
 
+export const deleteExercise = (exerciseId: number) => {
+  try {
+    console.log(`🗑️ Iniciando deleção do exercício ID: ${exerciseId}`);
+    
+    // Primeiro, buscar o nome do exercício para deletar registros relacionados
+    const exerciseStmt = db.prepareSync('SELECT label FROM exercises WHERE id = ?');
+    const exerciseResult = exerciseStmt.executeSync([exerciseId]);
+    let exerciseName = '';
+    
+    for (const row of exerciseResult) {
+      exerciseName = (row as any).label;
+      break;
+    }
+    exerciseStmt.finalizeSync();
+    
+    if (!exerciseName) {
+      throw new Error('Exercício não encontrado');
+    }
+    
+    console.log(`🗑️ Deletando registros relacionados ao exercício: ${exerciseName}`);
+    
+    // Deletar registros de treino (exercise_records) relacionados
+    const deleteRecordsStmt = db.prepareSync('DELETE FROM exercise_records WHERE exercise = ?');
+    const recordsResult = deleteRecordsStmt.executeSync([exerciseName]);
+    deleteRecordsStmt.finalizeSync();
+    console.log(`🗑️ ${recordsResult.changes} registros de treino deletados`);
+    
+    // Deletar planos de treino (workout_plans) relacionados
+    const deletePlansStmt = db.prepareSync('DELETE FROM workout_plans WHERE exercise = ?');
+    const plansResult = deletePlansStmt.executeSync([exerciseName]);
+    deletePlansStmt.finalizeSync();
+    console.log(`🗑️ ${plansResult.changes} planos de treino deletados`);
+    
+    // Finalmente, deletar o exercício
+    const deleteExerciseStmt = db.prepareSync('DELETE FROM exercises WHERE id = ?');
+    const exerciseDeleteResult = deleteExerciseStmt.executeSync([exerciseId]);
+    deleteExerciseStmt.finalizeSync();
+    
+    if (exerciseDeleteResult.changes === 0) {
+      throw new Error('Exercício não foi deletado');
+    }
+    
+    console.log(`✅ Exercício "${exerciseName}" deletado com sucesso junto com todos os registros relacionados`);
+    return exerciseDeleteResult.changes;
+  } catch (error) {
+    console.error('❌ ERRO ao deletar exercício:', error);
+    throw error;
+  }
+};
+
 export const clearAllData = () => {
   try {
     db.execSync('DELETE FROM exercise_records');
