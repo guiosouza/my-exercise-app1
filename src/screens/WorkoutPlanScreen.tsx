@@ -12,13 +12,22 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { theme } from '../styles/theme';
 import { ExerciseOption, WorkoutPlan } from '../types';
-import { getExercises, insertWorkoutPlan, getWorkoutPlans, insertExercise, updateExercise, deleteExercise } from '../database/database';
+import { 
+  getExercises, 
+  getWorkoutPlans, 
+  deleteExercise, 
+  recreateDefaultExercises,
+  insertWorkoutPlan,
+  insertExercise,
+  updateExercise
+} from '../database/database';
 
 const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
 
 export default function WorkoutPlanScreen() {
   const [exercises, setExercises] = useState<ExerciseOption[]>([]);
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   
@@ -53,19 +62,35 @@ export default function WorkoutPlanScreen() {
     }
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     try {
-      const exerciseList = getExercises();
-      const plans = getWorkoutPlans();
+      const exerciseList = await getExercises();
+      const planList = await getWorkoutPlans();
+      
+      console.log(`📊 FICHAS - Carregando ${exerciseList.length} exercícios:`, exerciseList.map(e => e.label));
+      
       setExercises(exerciseList);
-      setWorkoutPlans(plans);
-      if (exerciseList.length > 0) {
-        setSelectedExercise(exerciseList[0].label);
-      }
+      setWorkoutPlans(planList);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
   };
+
+  const handleRecreateExercises = async () => {
+    try {
+      const count = recreateDefaultExercises();
+      console.log(`🔄 Exercícios recriados: ${count}`);
+      await loadData(); // Recarregar dados
+    } catch (error) {
+      console.error('Erro ao recriar exercícios:', error);
+    }
+  };
+
+  // Filtrar exercícios baseado na pesquisa
+  const filteredExercises = exercises.filter(exercise =>
+    exercise.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    exercise.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleAddWorkoutPlan = () => {
     if (!selectedExercise || !minReps || !maxReps || !series) {
@@ -228,9 +253,30 @@ export default function WorkoutPlanScreen() {
 
       {/* Lista de Exercícios para Edição */}
       <View style={styles.exerciseListSection}>
-        <Text style={styles.sectionTitle}>Exercícios Disponíveis</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Exercícios Disponíveis</Text>
+          <Text style={styles.exerciseCounter}>({filteredExercises.length} exercícios)</Text>
+        </View>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="🔍 Pesquisar exercícios..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        <TouchableOpacity 
+          style={styles.recreateButton}
+          onPress={handleRecreateExercises}
+        >
+          <Text style={styles.recreateButtonText}>🔄 Recriar Exercícios</Text>
+        </TouchableOpacity>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.exerciseList}>
-          {exercises.map((exercise, index) => (
+          {filteredExercises.map((exercise, index) => {
+            console.log(`🎯 FICHAS - Renderizando card ${index + 1}/${filteredExercises.length}: ${exercise.label}`);
+            return (
             <TouchableOpacity 
               key={index} 
               style={styles.exerciseCard}
@@ -238,21 +284,22 @@ export default function WorkoutPlanScreen() {
             >
               <View style={styles.exerciseCardContent}>
                 <Text style={styles.exerciseCardTitle}>{exercise.label}</Text>
-                <Text style={styles.exerciseCardDescription} numberOfLines={2}>
+                <Text style={styles.exerciseCardDescription} numberOfLines={3}>
                   {exercise.description || 'Sem descrição'}
                 </Text>
               </View>
               <View style={styles.exerciseCardActions}>
-                <Text style={styles.editText}>Toque para editar</Text>
                 <TouchableOpacity 
                   style={styles.deleteButton}
                   onPress={() => handleDeleteExercise(exercise)}
                 >
-                  <Text style={styles.deleteButtonText}>🗑️</Text>
+                  <Text style={styles.deleteButtonText}>Excluir</Text>
                 </TouchableOpacity>
               </View>
+              <Text style={styles.editText}>Toque para editar</Text>
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -755,38 +802,102 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.md,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  exerciseCounter: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
   },
   exerciseList: {
     flexDirection: 'row',
+    paddingHorizontal: theme.spacing.sm,
+  },
+  searchContainer: {
+    marginBottom: 15,
+  },
+  searchInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   exerciseCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    marginRight: theme.spacing.md,
-    width: 150,
-    height: 120, // Altura fixa para manter consistência
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    justifyContent: 'space-between', // Distribui o conteúdo uniformemente
+    backgroundColor: '#4A90E2',
+    borderRadius: 16,
+    padding: 18,
+    marginRight: 15,
+    minWidth: 180,
+    minHeight: 140,
+    borderWidth: 0,
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  recreateButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+  },
+  recreateButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   exerciseCardTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.sm,
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    flex: 1,
+  },
+  exerciseCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  exerciseCardNumber: {
+    fontSize: 12,
+    color: '#4A90E2',
+    fontWeight: '600',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 24,
+    textAlign: 'center',
   },
   exerciseCardContent: {
-    flex: 1, // Ocupa o espaço disponível
+    flex: 1,
+    justifyContent: 'center',
   },
   exerciseCardDescription: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
     fontSize: 12,
-    flex: 1, // Permite que a descrição se expanda
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: theme.spacing.sm,
   },
   editText: {
     ...theme.typography.body,
@@ -794,24 +905,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: theme.spacing.xs, // Pequeno espaçamento do conteúdo acima
-    paddingTop: theme.spacing.xs, // Padding interno para melhor visual
-    flex: 1,
+    marginTop: theme.spacing.xs,
+    paddingTop: theme.spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
   exerciseCardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: theme.spacing.xs,
+    justifyContent: 'center',
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.sm,
   },
   deleteButton: {
     backgroundColor: '#ff4444',
     borderRadius: theme.borderRadius.sm,
-    padding: 4,
-    marginLeft: theme.spacing.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 60,
+    alignItems: 'center',
   },
   deleteButtonText: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'white',
+    fontWeight: '600',
   },
 });

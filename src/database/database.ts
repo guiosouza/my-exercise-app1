@@ -118,6 +118,7 @@ export const initDatabase = () => {
         { label: "Supino inclinado", description: "Supino inclinado" },
         { label: "Crucifixo", description: "Crucifixo para peitoral" },
         { label: "Mergulho", description: "Mergulho em paralelas" },
+        { label: "Desenvolvimento", description: "Desenvolvimento de ombros" },
         { label: "Remada", description: "Remada para costas" },
         { label: "Pulldown", description: "Puxada alta" },
         { label: "Desenvolvimento", description: "Desenvolvimento de ombros" },
@@ -420,5 +421,63 @@ export const clearAllData = () => {
   } catch (error) {
     console.error('Error clearing data:', error);
     throw error;
+  }
+};
+
+export const recreateDefaultExercises = () => {
+  try {
+    console.log('🔄 Recriando exercícios padrão...');
+    
+    // Primeiro, limpar exercícios existentes
+    db.runSync('DELETE FROM exercises');
+    console.log('🗑️ Exercícios existentes removidos');
+    
+    // Inserir exercícios padrão
+    const defaultExercises = [
+      { label: "Flexão", description: "Exercício de flexão tradicional" },
+      { label: "Flexão declinada (30°)", description: "Flexão com pés elevados" },
+      { label: "Barra", description: "Exercício de barra fixa" },
+      { label: "Abdominal", description: "Exercício abdominal tradicional" },
+      { label: "Agachamento", description: "Agachamento livre" },
+      { label: "Agachamento (1 perna)", description: "Agachamento unilateral" },
+      { label: "Levantamento lateral (1 perna)", description: "Levantamento lateral unilateral" },
+      { label: "Bícepes", description: "Exercício para bíceps" },
+      { label: "Rosca", description: "Rosca para bíceps" },
+      { label: "Rosca alternada", description: "Rosca alternada para bíceps" },
+      { label: "Rosca direta", description: "Rosca direta para bíceps" },
+      { label: "Rosca concentrada", description: "Rosca concentrada para bíceps" },
+      { label: "Rosca martelo", description: "Rosca martelo para bíceps" },
+      { label: "Trícepes", description: "Exercício para tríceps" },
+      { label: "Ombro - Elevação frontal (pronada)", description: "Elevação frontal pronada" },
+      { label: "Ombro - Elevação frontal (neutra)", description: "Elevação frontal neutra" },
+      { label: "Costas", description: "Exercício para costas" },
+      { label: "Antebraço", description: "Exercício para antebraço" },
+      { label: "Nádegas", description: "Exercício para glúteos" },
+      { label: "Elevação pélvica", description: "Elevação pélvica para glúteos" },
+      { label: "Panturrilha", description: "Exercício para panturrilha" },
+      { label: "Peitoral", description: "Exercício para peitoral" },
+      { label: "Supino", description: "Supino reto" },
+      { label: "Supino inclinado", description: "Supino inclinado" },
+      { label: "Crucifixo", description: "Crucifixo para peitoral" },
+      { label: "Mergulho", description: "Mergulho em paralelas" },
+      { label: "Desenvolvimento", description: "Desenvolvimento para ombros" },
+      { label: "Remada", description: "Remada para costas" },
+      { label: "Leg Press", description: "Leg press para pernas" },
+      { label: "Extensão de pernas", description: "Extensão de pernas no aparelho" }
+    ];
+
+    const insertStmt = db.prepareSync('INSERT INTO exercises (label, description) VALUES (?, ?)');
+    
+    for (const exercise of defaultExercises) {
+      insertStmt.executeSync([exercise.label, exercise.description]);
+    }
+    
+    insertStmt.finalizeSync();
+    console.log(`✅ ${defaultExercises.length} exercícios padrão recriados com sucesso!`);
+    
+    return defaultExercises.length;
+  } catch (error) {
+    console.error('❌ Erro ao recriar exercícios padrão:', error);
+    return 0;
   }
 };
