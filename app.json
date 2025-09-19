@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "exercise-mobile-app",
+    "name": "Exercise One",
     "slug": "exercise-app-1",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app-icon-my-exercise-app-1.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
