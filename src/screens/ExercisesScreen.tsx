@@ -68,6 +68,17 @@ export default function ExercisesScreen() {
     }
   };
 
+  const handleRefreshExercises = () => {
+    try {
+      loadExercises();
+      setSearchQuery(''); // Limpar pesquisa ao recarregar
+      Alert.alert('Sucesso', 'Lista de exercícios atualizada!');
+    } catch (error) {
+      console.error('Erro ao recarregar exercícios:', error);
+      Alert.alert('Erro', 'Erro ao recarregar exercícios');
+    }
+  };
+
   const loadTodayWorkout = () => {
     try {
       const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long' });
@@ -186,7 +197,15 @@ export default function ExercisesScreen() {
       
       {/* Seleção de Exercício */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Selecionar Exercício</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Selecionar Exercício</Text>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={handleRefreshExercises}
+          >
+            <Text style={styles.refreshButtonText}>🔄</Text>
+          </TouchableOpacity>
+        </View>
         
         {/* Campo de Pesquisa */}
         <View style={styles.inputGroup}>
@@ -395,8 +414,25 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...theme.typography.h3,
-    marginBottom: theme.spacing.md,
     color: theme.colors.primary,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  refreshButton: {
+    backgroundColor: theme.colors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshButtonText: {
+    color: theme.colors.background,
+    fontSize: 18,
   },
   pickerContainer: {
     backgroundColor: theme.colors.background,
