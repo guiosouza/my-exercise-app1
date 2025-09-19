@@ -8,6 +8,7 @@ import {
   Dimensions,
   Image,
   TextInput,
+  Alert,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { Picker } from "@react-native-picker/picker";
@@ -110,6 +111,13 @@ export default function StatisticsScreen() {
         console.error("Stack trace:", error.stack);
       }
     }
+  };
+
+  const handleRefreshExercises = () => {
+    console.log("🔄 StatisticsScreen: Recarregando exercícios...");
+    loadExercises();
+    setSearchQuery('');
+    Alert.alert("Sucesso", "Lista de exercícios recarregada!");
   };
 
   const handleSearch = (query: string) => {
@@ -473,7 +481,15 @@ export default function StatisticsScreen() {
 
       {/* Seleção de Exercício */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Selecionar Exercício</Text>
+        <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Selecionar Exercício</Text>
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={handleRefreshExercises}
+              >
+                <Text style={styles.refreshButtonText}>🔄</Text>
+              </TouchableOpacity>
+            </View>
         
         {/* Campo de Pesquisa */}
         <View style={styles.inputGroup}>
@@ -707,8 +723,25 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...theme.typography.h3,
-    marginBottom: theme.spacing.md,
     color: theme.colors.primary,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  refreshButton: {
+    backgroundColor: theme.colors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  refreshButtonText: {
+    color: theme.colors.surface,
+    fontSize: 18,
   },
   subtitle: {
     ...theme.typography.caption,
