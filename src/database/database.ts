@@ -417,6 +417,7 @@ export const clearAllData = () => {
   try {
     db.execSync('DELETE FROM exercise_records');
     db.execSync('DELETE FROM workout_plans');
+    db.execSync('DELETE FROM exercises');
     console.log('All data cleared successfully');
   } catch (error) {
     console.error('Error clearing data:', error);

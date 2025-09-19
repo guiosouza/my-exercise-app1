@@ -13,7 +13,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { theme } from '../styles/theme';
 import { UserStats, ExerciseRecord } from '../types';
-import { getExerciseRecords, clearAllData, importExerciseRecords } from '../database/database';
+import { getExerciseRecords, clearAllData, importExerciseRecords, recreateDefaultExercises } from '../database/database';
 
 export default function ProfileScreen() {
   const [stats, setStats] = useState<UserStats>({
@@ -300,6 +300,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               clearAllData();
+              recreateDefaultExercises();
               await AsyncStorage.clear();
               setStats({
                 totalWorkouts: 0,
@@ -308,7 +309,7 @@ export default function ProfileScreen() {
                 longestStreak: 0,
                 currentStreak: 0,
               });
-              Alert.alert('Sucesso', 'Todos os dados foram apagados');
+              Alert.alert('Sucesso', 'Todos os dados foram apagados e exercícios padrão restaurados');
             } catch (error) {
               Alert.alert('Erro', 'Erro ao limpar dados');
               console.error(error);
