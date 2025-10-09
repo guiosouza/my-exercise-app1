@@ -1,37 +1,48 @@
 {
   "expo": {
-    "name": "Exercise One",
-    "slug": "exercise-app-1",
+    "name": "my-exercise-app1",
+    "slug": "my-exercise-app1",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/app-icon-my-exercise-app-1.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myexerciseapp1",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/app-icon-my-exercise-app-1.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.guiosouza.exerciseapp1"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "61f2c672-bbec-43be-a644-e63836eaa342"
-      }
-    },
-    "owner": "guiosouza"
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
   }
 }
