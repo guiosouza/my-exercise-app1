@@ -17,17 +17,26 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
-        name="index"
+        name="WorkoutSessionScreen"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Exercícios',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="figure.strengthtraining.traditional" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="EditScreen"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Edição',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="pencil" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="StatisticsScreen"
+        options={{
+          title: 'Estatísticas',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar" color={color} />,
         }}
       />
     </Tabs>
