@@ -38,6 +38,7 @@ export default function EditScreen() {
   const [results, setResults] = useState<any[]>([]);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [nonSelectInfo, setNonSelectInfo] = useState<{ rowsAffected?: number; lastInsertRowId?: number | null } | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'json'>('json'); // Novo estado para alternar entre visualizações
 
   useEffect(() => {
     ensureDb();
@@ -322,6 +323,25 @@ export default function EditScreen() {
               <ThemedText style={styles.secondaryButtonText}>Limpar</ThemedText>
             </TouchableOpacity>
           </View>
+          
+          {/* Botões para alternar entre visualizações */}
+          {results.length > 0 && (
+            <View style={[styles.row, { marginTop: 8 }]}>
+              <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF" style={{ marginRight: 8 }}>Visualização:</ThemedText>
+              <TouchableOpacity 
+                style={[styles.segmentButton, viewMode === 'json' && styles.segmentButtonActive]} 
+                onPress={() => setViewMode('json')}
+              >
+                <ThemedText style={styles.segmentText}>JSON</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.segmentButton, viewMode === 'table' && styles.segmentButtonActive]} 
+                onPress={() => setViewMode('table')}
+              >
+                <ThemedText style={styles.segmentText}>Tabela</ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
           {queryError && (
             <ThemedText style={{ color: '#FCA5A5', marginTop: 8 }}>Erro: {queryError}</ThemedText>
           )}
@@ -330,7 +350,7 @@ export default function EditScreen() {
               {`Linhas afetadas: ${nonSelectInfo.rowsAffected ?? 0}`}{nonSelectInfo.lastInsertRowId != null ? ` • Último ID: ${nonSelectInfo.lastInsertRowId}` : ''}
             </ThemedText>
           )}
-          {results.length > 0 && (
+          {results.length > 0 && viewMode === 'table' && (
             <ScrollView horizontal style={styles.tableContainer}>
               <View>
                 <View style={[styles.tableRow, styles.tableHeaderRow]}>
@@ -360,6 +380,18 @@ export default function EditScreen() {
                   </View>
                 ))}
               </View>
+            </ScrollView>
+          )}
+          {results.length > 0 && viewMode === 'json' && (
+            <ScrollView 
+              style={styles.jsonContainer}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+              scrollEnabled={true}
+            >
+              <ThemedText style={styles.jsonText} selectable>
+                {JSON.stringify(Array.isArray(results) ? results : [results], null, 2)}
+              </ThemedText>
             </ScrollView>
           )}
           {results.length === 0 && !queryError && !nonSelectInfo && (
@@ -663,5 +695,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     backgroundColor: 'rgba(37, 99, 235, 0.08)'
-  }
+  },
+  jsonContainer: {
+    marginTop: 8,
+    maxHeight: 300,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    flex: 0,
+  },
+  jsonText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    color: '#FFFFFF',
+    padding: 12,
+    lineHeight: 16,
+    flexShrink: 0,
+  },
 });
