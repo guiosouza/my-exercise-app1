@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Alert, Modal, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Modal, StyleSheet, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
@@ -9,7 +9,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { createExerciseFromForm, ensureDb } from '@/lib/exercises-repo';
 import type { ExerciseFormData, ExerciseType } from '@/types/entities';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
+import { db } from '@/lib/db';
 
 export default function EditScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -25,6 +26,13 @@ export default function EditScreen() {
     youtubeLink: '',
     imageUri: '',
   });
+
+  // Estado para execução de SQL
+  const [sql, setSql] = useState<string>('SELECT * FROM exercises LIMIT 20;');
+  const [runningQuery, setRunningQuery] = useState<boolean>(false);
+  const [results, setResults] = useState<any[]>([]);
+  const [queryError, setQueryError] = useState<string | null>(null);
+  const [nonSelectInfo, setNonSelectInfo] = useState<{ rowsAffected?: number; lastInsertRowId?: number | null } | null>(null);
 
   useEffect(() => {
     ensureDb();
@@ -79,6 +87,82 @@ export default function EditScreen() {
     }
   }
 
+  function formatCell(value: any): string {
+    if (value === null || value === undefined) return 'NULL';
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return String(value);
+      }
+    }
+    return String(value);
+  }
+
+  async function runQuery() {
+    const sqlText = sql.trim();
+    if (!sqlText) {
+      Alert.alert('Informe uma query', 'Digite uma instrução SQL para executar.');
+      return;
+    }
+    setRunningQuery(true);
+    setQueryError(null);
+    setNonSelectInfo(null);
+    try {
+      const firstToken = sqlText.split(/\s+/)[0]?.toLowerCase();
+      const isSelectLike = firstToken === 'select' || sqlText.toLowerCase().startsWith('with ') || firstToken === 'pragma';
+      if (isSelectLike && (db as any).getAllAsync) {
+        const rows = await (db as any).getAllAsync(sqlText);
+        setResults(rows ?? []);
+      } else if (isSelectLike) {
+        const res = await (db as any).runAsync(sqlText);
+        const rows = (res as any)?.rows ?? [];
+        setResults(rows);
+      } else {
+        const res = await (db as any).runAsync(sqlText);
+        const rowsAffected = (res as any)?.rowsAffected ?? (res as any)?.changes ?? 0;
+        const lastInsertRowId = (res as any)?.lastInsertRowId ?? (res as any)?.insertId ?? null;
+        setResults([]);
+        setNonSelectInfo({ rowsAffected, lastInsertRowId });
+      }
+    } catch (e: any) {
+      setQueryError(e?.message ?? String(e));
+    } finally {
+      setRunningQuery(false);
+    }
+  }
+
+  function clearResults() {
+    setResults([]);
+    setQueryError(null);
+    setNonSelectInfo(null);
+  }
+
+  const columns = useMemo(() => {
+    if (!results || results.length === 0) return [] as string[];
+    const first = Object.keys(results[0] ?? {});
+    const union = Array.from(new Set(results.flatMap((r) => Object.keys(r ?? {}))));
+    const extras = union.filter((k) => !first.includes(k)).sort();
+    return [...first, ...extras];
+  }, [results]);
+
+  const columnWidths = useMemo(() => {
+    const MIN = 110;
+    const MAX = 260;
+    const CHAR_W = 8; // monospace approx
+    const widths: Record<string, number> = {};
+    for (const col of columns) {
+      let maxLen = col.length;
+      for (const row of results) {
+        const cell = formatCell(row?.[col]);
+        if (cell.length > maxLen) maxLen = cell.length;
+      }
+      const calc = Math.min(Math.max((maxLen + 2) * CHAR_W, MIN), MAX);
+      widths[col] = calc;
+    }
+    return widths;
+  }, [columns, results]);
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
@@ -103,6 +187,77 @@ export default function EditScreen() {
 
       <Collapsible title="Deletar exercício">
         <ThemedText>• Exemplo: remover exercício</ThemedText>
+      </Collapsible>
+
+      <Collapsible title="Executar SQL">
+        <ThemedView style={styles.sqlCard}>
+          <ThemedText type="subtitle" lightColor="#FFFFFF" darkColor="#FFFFFF" style={styles.sqlTitle}>Console SQL</ThemedText>
+          <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">Digite sua query e visualize resultados em tabela.</ThemedText>
+          <View style={[styles.field, { marginTop: 8 }] }>
+            <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Query SQL</ThemedText>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="Ex.: SELECT * FROM exercises LIMIT 20"
+              placeholderTextColor={placeholderColor}
+              value={sql}
+              onChangeText={setSql}
+              multiline
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+          <View style={[styles.row, { marginTop: 8 }]}>
+            <TouchableOpacity style={styles.primaryButton} onPress={runQuery} disabled={runningQuery}>
+              <ThemedText style={styles.primaryButtonText}>{runningQuery ? 'Executando...' : 'Executar'}</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton} onPress={clearResults} disabled={runningQuery}>
+              <ThemedText style={styles.secondaryButtonText}>Limpar</ThemedText>
+            </TouchableOpacity>
+          </View>
+          {queryError && (
+            <ThemedText style={{ color: '#FCA5A5', marginTop: 8 }}>Erro: {queryError}</ThemedText>
+          )}
+          {nonSelectInfo && (
+            <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF" style={{ marginTop: 8 }}>
+              {`Linhas afetadas: ${nonSelectInfo.rowsAffected ?? 0}`}{nonSelectInfo.lastInsertRowId != null ? ` • Último ID: ${nonSelectInfo.lastInsertRowId}` : ''}
+            </ThemedText>
+          )}
+          {results.length > 0 && (
+            <ScrollView horizontal style={styles.tableContainer}>
+              <View>
+                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                  {columns.map((col) => (
+                    <ThemedText
+                      key={`h-${col}`}
+                      style={[styles.tableCell, styles.tableHeaderCell, { width: columnWidths[col], fontFamily: Fonts.mono }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {col}
+                    </ThemedText>
+                  ))}
+                </View>
+                {results.map((row, idx) => (
+                  <View key={`r-${idx}`} style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : undefined]}>
+                    {columns.map((col) => (
+                      <ThemedText
+                        key={`c-${idx}-${col}`}
+                        style={[styles.tableCell, { width: columnWidths[col], fontFamily: Fonts.mono }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {formatCell(row[col])}
+                      </ThemedText>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          )}
+          {results.length === 0 && !queryError && !nonSelectInfo && (
+            <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF" style={{ marginTop: 8 }}>Nenhum resultado para exibir.</ThemedText>
+          )}
+        </ThemedView>
       </Collapsible>
 
       <Modal visible={isModalVisible} animationType="slide" transparent>
@@ -319,5 +474,43 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#FFFFFF',
+  },
+  sqlCard: {
+    marginTop: 6,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+    gap: 8,
+  },
+  sqlTitle: {
+    fontWeight: '700',
+  },
+  tableContainer: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 8,
+  },
+  tableRow: {
+    flexDirection: 'row',
+  },
+  tableRowAlt: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  tableCell: {
+    minWidth: 140,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: '#FFFFFF',
+    borderRightWidth: 1,
+    borderColor: '#1F2937',
+  },
+  tableHeaderRow: {
+    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+  },
+  tableHeaderCell: {
+    fontWeight: '700',
   },
 });
