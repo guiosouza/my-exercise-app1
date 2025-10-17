@@ -6,6 +6,7 @@ import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { db } from '@/lib/db';
@@ -242,16 +243,13 @@ export default function EditScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
-      headerImage={<ThemedView style={{ height: 1 }} />}>
+      headerImage={<ThemedView style={{ height: 1 }} />}
+      contentStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}>
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Edição</ThemedText>
       </ThemedView>
 
-      <ThemedView style={styles.actions}>
-        <TouchableOpacity style={styles.primaryButton} onPress={openCreateModal}>
-          <ThemedText style={styles.primaryButtonText}>Criar exercício</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
+
       <Collapsible title="Exercícios">
         <View style={styles.listHeaderRow}>
           <ThemedText style={styles.listHeaderTitle}>Lista de exercícios</ThemedText>
@@ -264,30 +262,37 @@ export default function EditScreen() {
             <ActivityIndicator />
             <ThemedText style={{ marginLeft: 8 }}>Carregando...</ThemedText>
           </View>
-        ) : exercises.length === 0 ? (
-          <ThemedText style={{ color: '#9CA3AF' }}>Nenhum exercício cadastrado.</ThemedText>
         ) : (
           <View style={{ gap: 12 }}>
-            {exercises.map((ex) => (
-              <View key={ex.id} style={{ gap: 8 }}>
+            {/* Card de criar novo exercício */}
+            <TouchableOpacity activeOpacity={0.9} onPress={openCreateModal}>
+              <ThemedView style={styles.addCard}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <IconSymbol name="plus.circle.fill" color={Colors[colorScheme].tint} size={20} />
+                  <ThemedText type="defaultSemiBold">Criar novo exercício</ThemedText>
+                </View>
+                <ThemedText style={{ color: '#9CA3AF', marginTop: 4 }}>Adicionar um novo exercício à lista</ThemedText>
+              </ThemedView>
+            </TouchableOpacity>
+
+            {/* Lista de exercícios */}
+            {exercises.length === 0 ? (
+              <ThemedText style={{ color: '#9CA3AF' }}>Nenhum exercício cadastrado.</ThemedText>
+            ) : (
+              exercises.map((ex) => (
                 <ExerciseCard
+                  key={ex.id}
                   title={ex.title}
                   type={ex.type === 'weight' ? 'Peso' : 'Peso corporal'}
                   description={ex.description}
                   youtubeLink={ex.youtubeLink}
                   imageUri={ex.imageUri}
                   onPress={() => handleEdit(ex)}
+                  onEdit={() => handleEdit(ex)}
+                  onDelete={() => handleDelete(ex)}
                 />
-                <View style={styles.cardActionsRow}>
-                  <TouchableOpacity style={[styles.smallButton, styles.editButton]} onPress={() => handleEdit(ex)}>
-                    <ThemedText style={styles.smallButtonText}>Editar</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.smallButton, styles.deleteButton]} onPress={() => handleDelete(ex)}>
-                    <ThemedText style={styles.smallButtonText}>Excluir</ThemedText>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+              ))
+            )}
           </View>
         )}
       </Collapsible>
@@ -652,4 +657,11 @@ const styles = StyleSheet.create({
   tableHeaderCell: {
     fontWeight: '700',
   },
+  addCard: {
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: 'rgba(37, 99, 235, 0.08)'
+  }
 });

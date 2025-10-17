@@ -19,6 +19,8 @@ const MAPPING = {
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'pencil': 'edit',
+  'trash': 'delete',
+  'plus.circle.fill': 'add-circle',
   'chart.bar': 'bar-chart',
   'figure.strengthtraining.traditional': 'fitness-center',
   'play.circle.fill': 'play-circle-filled',

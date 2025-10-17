@@ -21,6 +21,8 @@ type ExerciseCardProps = {
   youtubeLink?: string;
   onPress?: () => void;
   imageUri?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
 };
 
 export function ExerciseCard({
@@ -30,6 +32,8 @@ export function ExerciseCard({
   youtubeLink,
   onPress,
   imageUri,
+  onEdit,
+  onDelete,
 }: ExerciseCardProps) {
   const theme = useColorScheme() ?? "light";
   const borderColor = theme === "light" ? "#1F2937" : "#1F2937";
@@ -98,6 +102,31 @@ export function ExerciseCard({
           <ThemedText type="defaultSemiBold" style={styles.title}>
             {title}
           </ThemedText>
+          <View style={{ flex: 1 }} />
+          {onEdit ? (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onEdit?.();
+              }}
+              style={styles.actionBtn}
+              accessibilityLabel="Editar exercício"
+            >
+              <IconSymbol name="pencil" color={iconColor} size={18} />
+            </TouchableOpacity>
+          ) : null}
+          {onDelete ? (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onDelete?.();
+              }}
+              style={[styles.actionBtn, { marginLeft: 6 }]}
+              accessibilityLabel="Excluir exercício"
+            >
+              <IconSymbol name="trash" color={iconColor} size={18} />
+            </TouchableOpacity>
+          ) : null}
         </View>
         <ThemedText style={styles.meta}>{type}</ThemedText>
 
@@ -166,6 +195,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  actionBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   title: {
     fontSize: 18,
