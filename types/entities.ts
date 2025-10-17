@@ -25,7 +25,7 @@ export interface WorkoutSession {
 export interface Exercise {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   type: ExerciseType;
   bodyweightPercentage?: number; // apenas para tipo 'bodyweight'
   youtubeLink?: string;
