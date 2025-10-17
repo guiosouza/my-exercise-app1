@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, StyleSheet, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { ExerciseCard } from '@/components/exercise-card';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
+import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { createExerciseFromForm, ensureDb } from '@/lib/exercises-repo';
-import type { ExerciseFormData, ExerciseType } from '@/types/entities';
-import * as ImagePicker from 'expo-image-picker';
-import { Colors, Fonts } from '@/constants/theme';
 import { db } from '@/lib/db';
+import { createExerciseFromForm, deleteExercise, ensureDb, getAllExercises, updateExerciseFromForm } from '@/lib/exercises-repo';
+import type { Exercise, ExerciseFormData, ExerciseType } from '@/types/entities';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function EditScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -18,6 +19,9 @@ export default function EditScreen() {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loadingList, setLoadingList] = useState<boolean>(false);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [form, setForm] = useState<ExerciseFormData>({
     title: '',
     description: '',
@@ -36,10 +40,21 @@ export default function EditScreen() {
 
   useEffect(() => {
     ensureDb();
+    reloadExercises();
   }, []);
 
   function setType(type: ExerciseType) {
     setForm((prev) => ({ ...prev, type, bodyweightPercentage: type === 'bodyweight' ? prev.bodyweightPercentage : undefined }));
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setForm({ title: '', description: '', type: 'weight', bodyweightPercentage: undefined, youtubeLink: '', imageUri: '' });
+  }
+
+  function openCreateModal() {
+    resetForm();
+    setIsModalVisible(true);
   }
 
   function validate(): string | null {
@@ -53,6 +68,18 @@ export default function EditScreen() {
     return null;
   }
 
+  async function reloadExercises() {
+    setLoadingList(true);
+    try {
+      const list = await getAllExercises();
+      setExercises(list);
+    } catch (e) {
+      // noop
+    } finally {
+      setLoadingList(false);
+    }
+  }
+
   async function handleSave() {
     const error = validate();
     if (error) {
@@ -61,11 +88,17 @@ export default function EditScreen() {
     }
     try {
       setSaving(true);
-      await createExerciseFromForm(form);
+      if (editingId) {
+        await updateExerciseFromForm(editingId, form);
+        Alert.alert('Sucesso', 'Exercício atualizado com sucesso.');
+      } else {
+        await createExerciseFromForm(form);
+        Alert.alert('Sucesso', 'Exercício criado com sucesso.');
+      }
       setSaving(false);
       setIsModalVisible(false);
-      setForm({ title: '', description: '', type: 'weight', bodyweightPercentage: undefined, youtubeLink: '', imageUri: '' });
-      Alert.alert('Sucesso', 'Exercício criado com sucesso.');
+      resetForm();
+      await reloadExercises();
     } catch (e) {
       setSaving(false);
       Alert.alert('Erro', 'Não foi possível salvar o exercício.');
@@ -138,6 +171,49 @@ export default function EditScreen() {
     setNonSelectInfo(null);
   }
 
+  function handleEdit(ex: Exercise) {
+    setEditingId(ex.id);
+    setForm({
+      title: ex.title,
+      description: ex.description ?? '',
+      type: ex.type,
+      bodyweightPercentage: ex.bodyweightPercentage,
+      youtubeLink: ex.youtubeLink ?? '',
+      imageUri: ex.imageUri ?? '',
+    });
+    setIsModalVisible(true);
+  }
+
+  function handleDelete(ex: Exercise) {
+    Alert.alert(
+      'Confirmar exclusão',
+      `Deseja realmente excluir o exercício "${ex.title}"? Esta ação não poderá ser desfeita.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteExercise(ex.id);
+              Alert.alert('Excluído', 'Exercício removido com sucesso.');
+              await reloadExercises();
+            } catch (e: any) {
+              const msg = e?.message || String(e);
+              const isFkFail = /FOREIGN KEY/i.test(msg) || /constraint failed/i.test(msg);
+              Alert.alert(
+                'Erro ao excluir',
+                isFkFail
+                  ? 'Este exercício está sendo utilizado em outros registros e não pode ser excluído.'
+                  : 'Não foi possível excluir o exercício.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  }
+
   const columns = useMemo(() => {
     if (!results || results.length === 0) return [] as string[];
     const first = Object.keys(results[0] ?? {});
@@ -172,21 +248,48 @@ export default function EditScreen() {
       </ThemedView>
 
       <ThemedView style={styles.actions}>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => setIsModalVisible(true)}>
+        <TouchableOpacity style={styles.primaryButton} onPress={openCreateModal}>
           <ThemedText style={styles.primaryButtonText}>Criar exercício</ThemedText>
         </TouchableOpacity>
       </ThemedView>
-
-      <Collapsible title="Criar exercício">
-        <ThemedText>Abra o modal acima para criar um exercício.</ThemedText>
-      </Collapsible>
-
-      <Collapsible title="Editar exercício">
-        <ThemedText>• Exemplo: atualizar porcentagem de peso corporal</ThemedText>
-      </Collapsible>
-
-      <Collapsible title="Deletar exercício">
-        <ThemedText>• Exemplo: remover exercício</ThemedText>
+      <Collapsible title="Exercícios">
+        <View style={styles.listHeaderRow}>
+          <ThemedText style={styles.listHeaderTitle}>Lista de exercícios</ThemedText>
+          <TouchableOpacity style={styles.secondaryButton} onPress={reloadExercises}>
+            <ThemedText style={styles.secondaryButtonText}>Recarregar</ThemedText>
+          </TouchableOpacity>
+        </View>
+        {loadingList ? (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator />
+            <ThemedText style={{ marginLeft: 8 }}>Carregando...</ThemedText>
+          </View>
+        ) : exercises.length === 0 ? (
+          <ThemedText style={{ color: '#9CA3AF' }}>Nenhum exercício cadastrado.</ThemedText>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {exercises.map((ex) => (
+              <View key={ex.id} style={{ gap: 8 }}>
+                <ExerciseCard
+                  title={ex.title}
+                  type={ex.type === 'weight' ? 'Peso' : 'Peso corporal'}
+                  description={ex.description}
+                  youtubeLink={ex.youtubeLink}
+                  imageUri={ex.imageUri}
+                  onPress={() => handleEdit(ex)}
+                />
+                <View style={styles.cardActionsRow}>
+                  <TouchableOpacity style={[styles.smallButton, styles.editButton]} onPress={() => handleEdit(ex)}>
+                    <ThemedText style={styles.smallButtonText}>Editar</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.smallButton, styles.deleteButton]} onPress={() => handleDelete(ex)}>
+                    <ThemedText style={styles.smallButtonText}>Excluir</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </Collapsible>
 
       <Collapsible title="Executar SQL">
@@ -229,7 +332,7 @@ export default function EditScreen() {
                   {columns.map((col) => (
                     <ThemedText
                       key={`h-${col}`}
-                      style={[styles.tableCell, styles.tableHeaderCell, { width: columnWidths[col], fontFamily: Fonts.mono }]}
+                      style={[styles.tableCell, styles.tableHeaderCell, { width: columnWidths[col], fontFamily: 'monospace' }]}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
@@ -242,7 +345,7 @@ export default function EditScreen() {
                     {columns.map((col) => (
                       <ThemedText
                         key={`c-${idx}-${col}`}
-                        style={[styles.tableCell, { width: columnWidths[col], fontFamily: Fonts.mono }]}
+                        style={[styles.tableCell, { width: columnWidths[col], fontFamily: 'monospace' }]}
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
@@ -263,7 +366,7 @@ export default function EditScreen() {
       <Modal visible={isModalVisible} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
           <ThemedView style={styles.modalCard}>
-            <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">Novo exercício</ThemedText>
+            <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">{editingId ? 'Editar exercício' : 'Novo exercício'}</ThemedText>
 
             <View style={styles.field}>
               <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Título</ThemedText>
@@ -355,11 +458,11 @@ export default function EditScreen() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)} disabled={saving}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => { setIsModalVisible(false); resetForm(); }} disabled={saving}>
                 <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-                <ThemedText style={styles.saveButtonText}>{saving ? 'Salvando...' : 'Salvar'}</ThemedText>
+                <ThemedText style={styles.saveButtonText}>{saving ? 'Salvando...' : (editingId ? 'Salvar alterações' : 'Salvar')}</ThemedText>
               </TouchableOpacity>
             </View>
           </ThemedView>
@@ -438,6 +541,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  listHeaderTitle: {
+    fontWeight: '700',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  smallButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  editButton: {
+    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+    borderWidth: 1,
+    borderColor: '#2563EB',
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  smallButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   modalActions: {
     flexDirection: 'row',
