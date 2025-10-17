@@ -1,71 +1,323 @@
-import { Image } from "expo-image";
-import { StyleSheet, View } from "react-native";
+import { Image } from 'expo-image';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Modal, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-import { ExerciseCard } from "@/components/exercise-card";
-import ParallaxScrollView from "@/components/parallax-scroll-view";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
+import { ExerciseCard } from '@/components/exercise-card';
+import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { Collapsible } from '@/components/ui/collapsible';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ensureDb as ensureExerciseDb, getAllExercises } from '@/lib/exercises-repo';
+import { calculateEffectiveWeight, calculateTotalLoad, createWorkoutSessionFromForm } from '@/lib/workout-sessions-repo';
+import type { Exercise, WorkoutSessionFormData } from '@/types/entities';
 
 export default function WorkoutSessionScreen() {
-  const mockedExerciseData = [
-    {
-      id: 1,
-      title: "Flexão",
-      type: "Peso corporal",
-      description:
-        "Flexão é um exercício cardiorrespiratório que fortalece os músculos do peito, tríceps e glúteos.",
-      youtubeLink: "https://www.youtube.com/shorts/FyhRWcdJbAo",
-    },
-  ];
+  const colorScheme = useColorScheme() ?? 'light';
+  const placeholderColor = Colors[colorScheme].icon;
+
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [form, setForm] = useState<WorkoutSessionFormData>({
+    completeReps: 0,
+    negativeReps: 0,
+    failedReps: 0,
+    sets: 0,
+    weight: 0,
+    restTime: 80,
+  });
+
+  useEffect(() => {
+    ensureExerciseDb();
+    reloadExercises();
+  }, []);
+
+  async function reloadExercises() {
+    setLoading(true);
+    try {
+      const list = await getAllExercises();
+      setExercises(list);
+    } catch (e) {
+      // noop
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openFormFor(ex: Exercise) {
+    setSelectedExercise(ex);
+    setForm({ completeReps: 0, negativeReps: 0, failedReps: 0, sets: 0, weight: 0, restTime: 80 });
+    setIsModalVisible(true);
+  }
+
+  const previewTotalLoad = useMemo(() => {
+    if (!selectedExercise) return 0;
+    return calculateTotalLoad(selectedExercise, form);
+  }, [selectedExercise, form]);
+
+  const previewEffectiveWeight = useMemo(() => {
+    if (!selectedExercise) return 0;
+    return Math.round(calculateEffectiveWeight(selectedExercise, form.weight || 0) * 100) / 100;
+  }, [selectedExercise, form.weight]);
+
+  async function handleSave() {
+    if (!selectedExercise) return;
+    try {
+      setSaving(true);
+      await createWorkoutSessionFromForm(selectedExercise, form);
+      setSaving(false);
+      setIsModalVisible(false);
+      Alert.alert('Sucesso', 'Sessão de treino gravada.');
+    } catch (e) {
+      setSaving(false);
+      Alert.alert('Erro', 'Não foi possível gravar a sessão.');
+    }
+  }
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: "#0F172A", dark: "#0F172A" }}
+      headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
       headerImage={
         <Image
-          source={require("@/assets/images/react-logo.png")}
+          source={require('@/assets/images/react-logo.png')}
           style={styles.reactLogo}
         />
       }
+      contentStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}
     >
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Exercícios</ThemedText>
       </ThemedView>
-      <ThemedView style={styles.listContainer}>
-        <View style={styles.cards}>
-          {mockedExerciseData.map((exercise) => (
-            <ExerciseCard
-              key={exercise.id}
-              title={exercise.title}
-              type={`Tipo: ${exercise.type}`}
-              description={exercise.description}
-              youtubeLink={exercise.youtubeLink}
-            />
-          ))}
+
+      <Collapsible title="Selecionar exercício">
+        {loading ? (
+          <ThemedText style={{ color: '#9CA3AF' }}>Carregando...</ThemedText>
+        ) : exercises.length === 0 ? (
+          <ThemedText style={{ color: '#9CA3AF' }}>Nenhum exercício cadastrado.</ThemedText>
+        ) : (
+          <View style={{ gap: 12 }}>
+            {exercises.map((ex) => (
+              <ExerciseCard
+                key={ex.id}
+                title={ex.title}
+                type={ex.type === 'weight' ? 'Peso' : 'Peso corporal'}
+                description={ex.description}
+                youtubeLink={ex.youtubeLink}
+                imageUri={ex.imageUri}
+                onPress={() => openFormFor(ex)}
+                onEdit={() => openFormFor(ex)}
+              />
+            ))}
+          </View>
+        )}
+      </Collapsible>
+
+      <Modal visible={isModalVisible} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <ThemedView style={styles.modalCard}>
+            <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">
+              Nova sessão de treino
+            </ThemedText>
+
+            {!!selectedExercise?.youtubeLink && (
+              <TouchableOpacity
+                style={styles.linkRow}
+                onPress={() => {
+                  // O ExerciseCard já trata abrir, aqui apenas exibimos o link
+                  Alert.alert('Dica', 'Abra o vídeo pelo card do exercício na lista.');
+                }}
+              >
+                <IconSymbol name="play.circle.fill" color="#FF0000" size={18} />
+                <ThemedText style={{ color: '#FF0000' }}>Ver vídeo do exercício</ThemedText>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.field}>
+              <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Repetições completas</ThemedText>
+              <TextInput
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor={placeholderColor}
+                keyboardType="numeric"
+                value={String(form.completeReps ?? 0)}
+                onChangeText={(t) => setForm((p) => ({ ...p, completeReps: Number(t.replace(/\D/g, '')) || 0 }))}
+              />
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.field, { flex: 1 }]}>
+                <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Negativas</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={placeholderColor}
+                  keyboardType="numeric"
+                  value={String(form.negativeReps ?? 0)}
+                  onChangeText={(t) => setForm((p) => ({ ...p, negativeReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                />
+              </View>
+              <View style={[styles.field, { flex: 1 }]}>
+                <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Falhas</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={placeholderColor}
+                  keyboardType="numeric"
+                  value={String(form.failedReps ?? 0)}
+                  onChangeText={(t) => setForm((p) => ({ ...p, failedReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                />
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.field, { flex: 1 }]}>
+                <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Séries</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={placeholderColor}
+                  keyboardType="numeric"
+                  value={String(form.sets ?? 0)}
+                  onChangeText={(t) => setForm((p) => ({ ...p, sets: Number(t.replace(/\D/g, '')) || 0 }))}
+                />
+              </View>
+              <View style={[styles.field, { flex: 1 }]}>
+                <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Peso (kg)</ThemedText>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={placeholderColor}
+                  keyboardType="numeric"
+                  value={String(form.weight ?? 0)}
+                  onChangeText={(t) => setForm((p) => ({ ...p, weight: Number(t.replace(/[^0-9.]/g, '')) || 0 }))}
+                />
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Descanso (s)</ThemedText>
+              <TextInput
+                style={styles.input}
+                placeholder="80"
+                placeholderTextColor={placeholderColor}
+                keyboardType="numeric"
+                value={String(form.restTime ?? 80)}
+                onChangeText={(t) => setForm((p) => ({ ...p, restTime: Number(t.replace(/\D/g, '')) || 80 }))}
+              />
+            </View>
+
+            {selectedExercise && (
+              <ThemedView style={styles.previewCard}>
+                <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF" style={{ fontWeight: '700' }}>
+                  Prévia da carga total
+                </ThemedText>
+                <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">
+                  Peso efetivo por rep: {previewEffectiveWeight} kg
+                </ThemedText>
+                <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">
+                  {previewTotalLoad} kg
+                </ThemedText>
+              </ThemedView>
+            )}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsModalVisible(false)} disabled={saving}>
+                <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving || !selectedExercise}>
+                <ThemedText style={styles.saveButtonText}>{saving ? 'Gravando...' : 'Gravar sessão'}</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
         </View>
-      </ThemedView>
+      </Modal>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-  },
-  listContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  cards: {
-    gap: 12,
   },
   reactLogo: {
     height: 178,
     width: 290,
     bottom: 0,
     left: 0,
-    position: "absolute",
+    position: 'absolute',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: '#0F172A',
+    gap: 12,
+  },
+  field: {
+    gap: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: '#FFFFFF',
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  previewCard: {
+    marginTop: 6,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    gap: 4,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+    marginTop: 6,
+  },
+  cancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+  },
+  saveButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: '#00110A',
+    fontWeight: '700',
+  },
+  linkRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
   },
 });
