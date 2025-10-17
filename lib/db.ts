@@ -24,7 +24,7 @@ export async function initDb() {
     );
   `);
 
-  // Tabela de sessões de treino
+  // Tabela de sessões de treino - JÁ INCLUI totalLoad
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS workout_sessions (
       id TEXT PRIMARY KEY NOT NULL,
@@ -36,10 +36,29 @@ export async function initDb() {
       sets INTEGER NOT NULL,
       weight REAL NOT NULL,
       restTime INTEGER NOT NULL,
-      totalLoad REAL NOT NULL,
+      totalLoad REAL NOT NULL DEFAULT 0,
       FOREIGN KEY (exerciseId) REFERENCES exercises(id) ON DELETE RESTRICT
     );
   `);
+
+  // Migração mais robusta para garantir a coluna totalLoad
+  try {
+    const result = await db.getAllAsync('PRAGMA table_info(workout_sessions);');
+    const hasTotalLoad = result.some((column: any) => column.name === 'totalLoad');
+    
+    if (!hasTotalLoad) {
+      console.log('Adicionando coluna totalLoad...');
+      await db.execAsync('ALTER TABLE workout_sessions ADD COLUMN totalLoad REAL NOT NULL DEFAULT 0;');
+    }
+  } catch (error) {
+    console.log('Erro na migração:', error);
+    // Se falhar, tenta adicionar a coluna diretamente
+    try {
+      await db.execAsync('ALTER TABLE workout_sessions ADD COLUMN totalLoad REAL NOT NULL DEFAULT 0;');
+    } catch {
+      // Ignora erro se a coluna já existir
+    }
+  }
 }
 
 // Insere um exercício
