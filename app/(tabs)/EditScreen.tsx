@@ -33,7 +33,7 @@ export default function EditScreen() {
   });
 
   // Estado para execução de SQL
-  const [sql, setSql] = useState<string>('SELECT * FROM exercises LIMIT 20;');
+  const [sql, setSql] = useState<string>('SELECT * FROM workout_sessions LIMIT 20;');
   const [runningQuery, setRunningQuery] = useState<boolean>(false);
   const [results, setResults] = useState<any[]>([]);
   const [queryError, setQueryError] = useState<string | null>(null);

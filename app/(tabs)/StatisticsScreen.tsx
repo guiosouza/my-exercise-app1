@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, StyleSheet, View, Pressable, ScrollView, TextInput, TouchableWithoutFeedback } from 'react-native'
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
 
 import ParallaxScrollView from '@/components/parallax-scroll-view'
 import { ThemedText } from '@/components/themed-text'
@@ -7,8 +7,8 @@ import { ThemedView } from '@/components/themed-view'
 import { Colors } from '@/constants/theme'
 import { useColorScheme } from '@/hooks/use-color-scheme'
 import { db } from '@/lib/db'
-import { ensureDb as ensureWorkoutDb } from '@/lib/workout-sessions-repo'
-import { getAllExercises, ensureDb as ensureExercisesDb } from '@/lib/exercises-repo'
+import { ensureDb as ensureExercisesDb, getAllExercises } from '@/lib/exercises-repo'
+import { calculateTotalLoad, ensureDb as ensureWorkoutDb } from '@/lib/workout-sessions-repo'
 
 export default function StatisticsScreen() {
   const colorScheme = useColorScheme() ?? 'light'
@@ -17,11 +17,18 @@ export default function StatisticsScreen() {
   const [error, setError] = useState<string | null>(null)
   const [records, setRecords] = useState<Array<{
     id: string
+    exerciseId: string
     rank: number
     exerciseTitle: string
+    exerciseType: string | null
+    exerciseBodyweightPercentage: number | null
     date: Date
     completeReps: number
+    negativeReps: number
+    failedReps: number
     sets: number
+    weight: number
+    restTime: number
     totalLoad: number
   }>>([])
   const [exercises, setExercises] = useState<Array<{id: string, title: string}>>([])
@@ -31,6 +38,13 @@ export default function StatisticsScreen() {
   const [filteredExercises, setFilteredExercises] = useState<Array<{id: string, title: string}>>([])
   const [selectedExerciseTitle, setSelectedExerciseTitle] = useState<string>('Todos')
 
+  // Edição de sessão
+  const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false)
+  const [editingRecord, setEditingRecord] = useState<any | null>(null)
+  const [editForm, setEditForm] = useState<{ completeReps: number, negativeReps: number, failedReps: number, sets: number, weight: number, restTime: number }>({ completeReps: 0, negativeReps: 0, failedReps: 0, sets: 0, weight: 0, restTime: 80 })
+  const [editWeightInput, setEditWeightInput] = useState<string>('0')
+  const [savingEdit, setSavingEdit] = useState<boolean>(false)
+
   async function fetchRecords(exerciseFilter: string) {
     setLoading(true)
     setError(null)
@@ -39,7 +53,11 @@ export default function StatisticsScreen() {
       const where = exerciseFilter === 'Todos' ? '' : 'WHERE ex.id = ?'
       const params = exerciseFilter === 'Todos' ? [] : [exerciseFilter]
       const rows = await (db as any).getAllAsync?.(
-        `SELECT ws.id, ws.exerciseId, ws.date, ws.completeReps, ws.sets, ws.totalLoad, ex.title as exerciseTitle
+        `SELECT 
+           ws.id, ws.exerciseId, ws.date,
+           ws.completeReps, ws.negativeReps, ws.failedReps,
+           ws.sets, ws.weight, ws.restTime, ws.totalLoad,
+           ex.title as exerciseTitle, ex.type as exerciseType, ex.bodyweightPercentage as exerciseBodyweightPercentage
          FROM workout_sessions ws
          JOIN exercises ex ON ex.id = ws.exerciseId
          ${where}
@@ -49,11 +67,18 @@ export default function StatisticsScreen() {
       )
       const arr = (rows ?? []).map((r: any, idx: number) => ({
         id: r.id,
+        exerciseId: r.exerciseId,
         rank: idx + 1,
         exerciseTitle: r.exerciseTitle,
+        exerciseType: r.exerciseType,
+        exerciseBodyweightPercentage: r.exerciseBodyweightPercentage,
         date: new Date(r.date),
         completeReps: Number(r.completeReps ?? 0),
+        negativeReps: Number(r.negativeReps ?? 0),
+        failedReps: Number(r.failedReps ?? 0),
         sets: Number(r.sets ?? 0),
+        weight: Number(r.weight ?? 0),
+        restTime: Number(r.restTime ?? 80),
         totalLoad: Number(r.totalLoad ?? 0),
       }))
       setRecords(arr)
@@ -119,6 +144,7 @@ export default function StatisticsScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
+      <View style={{ flex: 1 }}>
       <ParallaxScrollView
         headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
         headerImage={<ThemedView style={{ height: 1 }} />}
@@ -216,14 +242,191 @@ export default function StatisticsScreen() {
                     </ThemedText>
                   )}
                 </View>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity style={styles.editButton} onPress={() => {
+                    setEditingRecord(rec)
+                    setEditForm({
+                      completeReps: rec.completeReps,
+                      negativeReps: rec.negativeReps ?? 0,
+                      failedReps: rec.failedReps ?? 0,
+                      sets: rec.sets,
+                      weight: rec.weight ?? 0,
+                      restTime: rec.restTime ?? 80,
+                    })
+                    setEditWeightInput(String(rec.weight ?? 0))
+                    setIsEditModalVisible(true)
+                  }}>
+                    <ThemedText style={styles.editButtonText}>Editar</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.deleteButton} onPress={() => {
+                    Alert.alert('Confirmar', 'Deseja excluir esta sessão?', [
+                      { text: 'Cancelar', style: 'cancel' },
+                      { text: 'Excluir', style: 'destructive', onPress: async () => {
+                        try {
+                          await (db as any).runAsync?.('DELETE FROM workout_sessions WHERE id = ?;', [rec.id])
+                          await fetchRecords(selectedExercise)
+                        } catch (e) {
+                          Alert.alert('Erro', 'Não foi possível excluir a sessão.')
+                        }
+                      } },
+                    ])
+                  }}>
+                    <ThemedText style={styles.deleteButtonText}>Excluir</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </ThemedView>
             );
           })}
         </View>
       )}
       </ParallaxScrollView>
+ 
+      {/* Modal de edição */}
+      <Modal visible={isEditModalVisible} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <ThemedView style={styles.modalCard}>
+            <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">Editar sessão</ThemedText>
+ 
+            {editingRecord && (
+              <>
+                <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">{editingRecord.exerciseTitle} · {editingRecord.date.toLocaleDateString()}</ThemedText>
+ 
+                <View style={styles.field}>
+                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Repetições completas</ThemedText>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={String(editForm.completeReps ?? 0)}
+                    onChangeText={(t) => setEditForm((p) => ({ ...p, completeReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                  />
+                </View>
+ 
+                <View style={styles.row}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Negativas</ThemedText>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      value={String(editForm.negativeReps ?? 0)}
+                      onChangeText={(t) => setEditForm((p) => ({ ...p, negativeReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                    />
+                  </View>
+                  <View style={[styles.field, { flex: 1 }]}>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Falhas</ThemedText>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      value={String(editForm.failedReps ?? 0)}
+                      onChangeText={(t) => setEditForm((p) => ({ ...p, failedReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.row}>
+                  <View style={[styles.field, { flex: 1 }]}>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Séries</ThemedText>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      value={String(editForm.sets ?? 0)}
+                      onChangeText={(t) => setEditForm((p) => ({ ...p, sets: Number(t.replace(/\D/g, '')) || 0 }))}
+                    />
+                  </View>
+                  <View style={[styles.field, { flex: 1 }]}>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Peso (kg)</ThemedText>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="0"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
+                      value={editWeightInput}
+                      onChangeText={(t) => {
+                        let normalized = t.replace(',', '.').replace(/[^0-9.]/g, '');
+                        const dotIndex = normalized.indexOf('.');
+                        if (dotIndex !== -1) {
+                          normalized = normalized.slice(0, dotIndex + 1) + normalized.slice(dotIndex + 1).replace(/\./g, '');
+                        }
+                        if (normalized.startsWith('.')) normalized = '0' + normalized;
+                        setEditWeightInput(normalized);
+                        setEditForm((p) => ({ ...p, weight: normalized === '' || normalized === '.' ? 0 : parseFloat(normalized) }));
+                      }}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.field}>
+                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Descanso (s)</ThemedText>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="80"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={String(editForm.restTime ?? 80)}
+                    onChangeText={(t) => setEditForm((p) => ({ ...p, restTime: Number(t.replace(/\D/g, '')) || 80 }))}
+                  />
+                </View>
+
+                {/* Prévia do totalLoad */}
+                <ThemedView style={styles.previewCard}>
+                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF" style={{ fontWeight: '700' }}>Prévia da carga total</ThemedText>
+                  <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">
+                    {(() => {
+                      const ex = { id: editingRecord.exerciseId, title: editingRecord.exerciseTitle, type: editingRecord.exerciseType, bodyweightPercentage: editingRecord.exerciseBodyweightPercentage, description: undefined, youtubeLink: undefined, imageUri: undefined, createdAt: new Date(), updatedAt: new Date() } as any
+                      return calculateTotalLoad(ex, editForm)
+                    })()} kg
+                  </ThemedText>
+                </ThemedView>
+
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditModalVisible(false)} disabled={savingEdit}>
+                    <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveButton} onPress={async () => {
+                    if (!editingRecord) return
+                    try {
+                      setSavingEdit(true)
+                      const ex = { id: editingRecord.exerciseId, title: editingRecord.exerciseTitle, type: editingRecord.exerciseType, bodyweightPercentage: editingRecord.exerciseBodyweightPercentage, description: undefined, youtubeLink: undefined, imageUri: undefined, createdAt: new Date(), updatedAt: new Date() } as any
+                      const newTotal = calculateTotalLoad(ex, editForm)
+                      await (db as any).runAsync?.(
+                        `UPDATE workout_sessions SET completeReps = ?, negativeReps = ?, failedReps = ?, sets = ?, weight = ?, restTime = ?, totalLoad = ? WHERE id = ?;`,
+                        [
+                          Math.max(0, editForm.completeReps || 0),
+                          Math.max(0, editForm.negativeReps || 0),
+                          Math.max(0, editForm.failedReps || 0),
+                          Math.max(1, editForm.sets || 1),
+                          editForm.weight || 0,
+                          editForm.restTime || 80,
+                          newTotal,
+                          editingRecord.id,
+                        ]
+                      )
+                      setIsEditModalVisible(false)
+                      setSavingEdit(false)
+                      await fetchRecords(selectedExercise)
+                    } catch (e) {
+                      setSavingEdit(false)
+                      Alert.alert('Erro', 'Não foi possível salvar alterações.')
+                    }
+                  }} disabled={savingEdit}>
+                    <ThemedText style={styles.saveButtonText}>{savingEdit ? 'Salvando...' : 'Salvar'}</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </ThemedView>
+        </View>
+      </Modal>
+    </View>
     </TouchableWithoutFeedback>
-  )
+   )
 }
 
 const styles = StyleSheet.create({
@@ -344,5 +547,92 @@ const styles = StyleSheet.create({
     color: '#10B981',
     marginTop: 6,
     fontWeight: '600',
-  }
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  editButton: {
+    backgroundColor: '#1F2937',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  editButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239,68,68,0.12)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  deleteButtonText: {
+    color: '#EF4444',
+    fontWeight: '700',
+  },
+  // Estilos do modal de edição
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: '#0F172A',
+    gap: 12,
+  },
+  field: {
+    gap: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 8,
+    padding: 12,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    color: '#FFFFFF'
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+    marginTop: 6,
+  },
+  cancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  cancelButtonText: {
+    color: '#FFFFFF',
+  },
+  saveButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  saveButtonText: {
+    color: '#00110A',
+    fontWeight: '700',
+  },
+  previewCard: {
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)'
+  },
 })
