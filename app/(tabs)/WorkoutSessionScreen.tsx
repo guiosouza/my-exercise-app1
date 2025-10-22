@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ExerciseCard } from '@/components/exercise-card';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -31,6 +31,7 @@ export default function WorkoutSessionScreen() {
     weight: 0,
     restTime: 80,
   });
+  const [weightInput, setWeightInput] = useState<string>('0');
 
   useEffect(() => {
     ensureExerciseDb();
@@ -52,6 +53,7 @@ export default function WorkoutSessionScreen() {
   function openFormFor(ex: Exercise) {
     setSelectedExercise(ex);
     setForm({ completeReps: 0, negativeReps: 0, failedReps: 0, sets: 0, weight: 0, restTime: 80 });
+    setWeightInput('0');
     setIsModalVisible(true);
   }
 
@@ -192,9 +194,18 @@ export default function WorkoutSessionScreen() {
                   style={styles.input}
                   placeholder="0"
                   placeholderTextColor={placeholderColor}
-                  keyboardType="numeric"
-                  value={String(form.weight ?? 0)}
-                  onChangeText={(t) => setForm((p) => ({ ...p, weight: Number(t.replace(/[^0-9.]/g, '')) || 0 }))}
+                  keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
+                  value={weightInput}
+                  onChangeText={(t) => {
+                    let normalized = t.replace(',', '.').replace(/[^0-9.]/g, '');
+                    const dotIndex = normalized.indexOf('.');
+                    if (dotIndex !== -1) {
+                      normalized = normalized.slice(0, dotIndex + 1) + normalized.slice(dotIndex + 1).replace(/\./g, '');
+                    }
+                    if (normalized.startsWith('.')) normalized = '0' + normalized;
+                    setWeightInput(normalized);
+                    setForm((p) => ({ ...p, weight: normalized === '' || normalized === '.' ? 0 : parseFloat(normalized) }));
+                  }}
                 />
               </View>
             </View>

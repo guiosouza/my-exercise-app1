@@ -11,15 +11,9 @@ export default function StatisticsScreen() {
       headerImage={<ThemedView style={{ height: 1 }} />}>
       <ThemedView style={styles.section}>
         <ThemedText type="title">Estatísticas</ThemedText>
-        <ThemedText>
-          Evolução: 42% • Carga inicial: 140 kg • Carga final: 198 kg
-        </ThemedText>
       </ThemedView>
       <ThemedView style={styles.section}>
-        <ThemedText type="subtitle">TOP sessões</ThemedText>
-        <ThemedText>1 • Flexão • 280 kg • 05/10/2025 17:00</ThemedText>
-        <ThemedText>2 • Flexão • 140 kg • 03/10/2025 17:33</ThemedText>
-        <ThemedText>3 • Flexão • 120 kg • 01/10/2025 17:36</ThemedText>
+        
       </ThemedView>
     </ParallaxScrollView>
   );
