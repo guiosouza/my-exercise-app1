@@ -96,6 +96,12 @@ export default function WorkoutSessionScreen() {
         <ThemedText type="title">Exercícios</ThemedText>
       </ThemedView>
 
+      <View style={styles.reloadRow}>
+        <TouchableOpacity onPress={reloadExercises} disabled={loading} style={styles.reloadButton}>
+          <ThemedText style={styles.reloadButtonText}>{loading ? 'Recarregando...' : 'Recarregar lista'}</ThemedText>
+        </TouchableOpacity>
+      </View>
+
       <Collapsible title="Selecionar exercício">
         {loading ? (
           <ThemedText style={{ color: '#9CA3AF' }}>Carregando...</ThemedText>
@@ -330,5 +336,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'center',
+  },
+  reloadRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+  },
+  reloadButton: {
+    backgroundColor: '#1F2937',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  reloadButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
