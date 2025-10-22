@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native'
+import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'
 
 import ParallaxScrollView from '@/components/parallax-scroll-view'
 import { ThemedText } from '@/components/themed-text'
@@ -143,8 +143,7 @@ export default function StatisticsScreen() {
     : null
 
   return (
-    <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
-      <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <ParallaxScrollView
         headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
         headerImage={<ThemedView style={{ height: 1 }} />}
@@ -164,6 +163,7 @@ export default function StatisticsScreen() {
             placeholderTextColor="#9CA3AF"
             value={searchText}
             onChangeText={handleSearchChange}
+            onBlur={() => setShowDropdown(false)}
             onFocus={() => {
               setShowDropdown(true)
               if (searchText === selectedExerciseTitle) {
@@ -425,7 +425,6 @@ export default function StatisticsScreen() {
         </View>
       </Modal>
     </View>
-    </TouchableWithoutFeedback>
    )
 }
 
