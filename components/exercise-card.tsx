@@ -1,9 +1,9 @@
 import {
-    Alert,
-    Linking,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Alert,
+  Linking,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -92,7 +92,7 @@ export function ExerciseCard({
 
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <ThemedView style={[styles.card, { borderColor }]}>
+      <ThemedView style={[styles.card, { borderColor, backgroundColor: theme === "dark" ? "#1F2937" : "#F9FAFB" }]}>
         <View style={styles.row}>
           <IconSymbol
             name="figure.strengthtraining.traditional"
@@ -190,6 +190,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginVertical: 6,
   },
   row: {
     flexDirection: "row",

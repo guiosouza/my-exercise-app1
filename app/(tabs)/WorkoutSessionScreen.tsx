@@ -86,8 +86,8 @@ export default function WorkoutSessionScreen() {
       headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
       headerImage={
         <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={styles.reactLogo}
+          source={require('@/assets/images/workout-session.png')}
+          style={styles.headerImage}
         />
       }
       contentStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}
@@ -353,5 +353,11 @@ const styles = StyleSheet.create({
   reloadButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+    headerImage: {
+    height: 178,
+    width: '100%',
+    bottom: 0,
+    position: 'absolute',
   },
 });
