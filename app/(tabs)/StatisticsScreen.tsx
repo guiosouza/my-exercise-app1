@@ -378,26 +378,53 @@ export default function StatisticsScreen() {
                     <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => {
-                        /* ... */
+                        setEditingRecord(rec);
+                        setEditForm({
+                          completeReps: rec.completeReps,
+                          negativeReps: rec.negativeReps ?? 0,
+                          failedReps: rec.failedReps ?? 0,
+                          sets: rec.sets,
+                          weight: rec.weight ?? 0,
+                          restTime: rec.restTime ?? 80,
+                        });
+                        setEditWeightInput(String(rec.weight ?? 0));
+                        setIsEditModalVisible(true);
                       }}
                     >
                       <ThemedText style={styles.editButtonText}>
                         Editar
                       </ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteButton} onPress={() => {
-                    Alert.alert('Confirmar', 'Deseja excluir esta sessão?', [
-                      { text: 'Cancelar', style: 'cancel' },
-                      { text: 'Excluir', style: 'destructive', onPress: async () => {
-                        try {
-                          await (db as any).runAsync?.('DELETE FROM workout_sessions WHERE id = ?;', [rec.id])
-                          await fetchRecords(selectedExercise)
-                        } catch (e) {
-                          Alert.alert('Erro', 'Não foi possível excluir a sessão.')
-                        }
-                      } },
-                    ])
-                  }}>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => {
+                        Alert.alert(
+                          "Confirmar",
+                          "Deseja excluir esta sessão?",
+                          [
+                            { text: "Cancelar", style: "cancel" },
+                            {
+                              text: "Excluir",
+                              style: "destructive",
+                              onPress: async () => {
+                                try {
+                                  await (db as any).runAsync?.(
+                                    "DELETE FROM workout_sessions WHERE id = ?;",
+                                    [rec.id]
+                                  );
+                                  await fetchRecords(selectedExercise);
+                                } catch (e) {
+                                  Alert.alert(
+                                    "Erro",
+                                    "Não foi possível excluir a sessão."
+                                  );
+                                }
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    >
                       <ThemedText style={styles.deleteButtonText}>
                         Excluir
                       </ThemedText>
