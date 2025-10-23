@@ -1,57 +1,95 @@
-import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import ParallaxScrollView from '@/components/parallax-scroll-view'
-import { ThemedText } from '@/components/themed-text'
-import { ThemedView } from '@/components/themed-view'
-import { Colors } from '@/constants/theme'
-import { useColorScheme } from '@/hooks/use-color-scheme'
-import { db } from '@/lib/db'
-import { ensureDb as ensureExercisesDb, getAllExercises } from '@/lib/exercises-repo'
-import { calculateTotalLoad, ensureDb as ensureWorkoutDb } from '@/lib/workout-sessions-repo'
+import ParallaxScrollView from "@/components/parallax-scroll-view";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { db } from "@/lib/db";
+import {
+  ensureDb as ensureExercisesDb,
+  getAllExercises,
+} from "@/lib/exercises-repo";
+import {
+  calculateTotalLoad,
+  ensureDb as ensureWorkoutDb,
+} from "@/lib/workout-sessions-repo";
 
 export default function StatisticsScreen() {
-  const colorScheme = useColorScheme() ?? 'light'
+  const colorScheme = useColorScheme() ?? "light";
 
-  const [loading, setLoading] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
-  const [records, setRecords] = useState<Array<{
-    id: string
-    exerciseId: string
-    rank: number
-    exerciseTitle: string
-    exerciseType: string | null
-    exerciseBodyweightPercentage: number | null
-    date: Date
-    completeReps: number
-    negativeReps: number
-    failedReps: number
-    sets: number
-    weight: number
-    restTime: number
-    totalLoad: number
-  }>>([])
-  const [exercises, setExercises] = useState<Array<{id: string, title: string}>>([])
-  const [selectedExercise, setSelectedExercise] = useState<string>('Todos')
-  const [searchText, setSearchText] = useState<string>('')
-  const [showDropdown, setShowDropdown] = useState<boolean>(false)
-  const [filteredExercises, setFilteredExercises] = useState<Array<{id: string, title: string}>>([])
-  const [selectedExerciseTitle, setSelectedExerciseTitle] = useState<string>('Todos')
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [records, setRecords] = useState<
+    Array<{
+      id: string;
+      exerciseId: string;
+      rank: number;
+      exerciseTitle: string;
+      exerciseType: string | null;
+      exerciseBodyweightPercentage: number | null;
+      date: Date;
+      completeReps: number;
+      negativeReps: number;
+      failedReps: number;
+      sets: number;
+      weight: number;
+      restTime: number;
+      totalLoad: number;
+    }>
+  >([]);
+  const [exercises, setExercises] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
+  const [selectedExercise, setSelectedExercise] = useState<string>("Todos");
+  const [searchText, setSearchText] = useState<string>("");
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+  const [filteredExercises, setFilteredExercises] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
+  const [selectedExerciseTitle, setSelectedExerciseTitle] =
+    useState<string>("Todos");
 
   // Edição de sessão
-  const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false)
-  const [editingRecord, setEditingRecord] = useState<any | null>(null)
-  const [editForm, setEditForm] = useState<{ completeReps: number, negativeReps: number, failedReps: number, sets: number, weight: number, restTime: number }>({ completeReps: 0, negativeReps: 0, failedReps: 0, sets: 0, weight: 0, restTime: 80 })
-  const [editWeightInput, setEditWeightInput] = useState<string>('0')
-  const [savingEdit, setSavingEdit] = useState<boolean>(false)
+  const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
+  const [editingRecord, setEditingRecord] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<{
+    completeReps: number;
+    negativeReps: number;
+    failedReps: number;
+    sets: number;
+    weight: number;
+    restTime: number;
+  }>({
+    completeReps: 0,
+    negativeReps: 0,
+    failedReps: 0,
+    sets: 0,
+    weight: 0,
+    restTime: 80,
+  });
+  const [editWeightInput, setEditWeightInput] = useState<string>("0");
+  const [savingEdit, setSavingEdit] = useState<boolean>(false);
 
   async function fetchRecords(exerciseFilter: string) {
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      ensureWorkoutDb()
-      const where = exerciseFilter === 'Todos' ? '' : 'WHERE ex.id = ?'
-      const params = exerciseFilter === 'Todos' ? [] : [exerciseFilter]
+      ensureWorkoutDb();
+      const where = exerciseFilter === "Todos" ? "" : "WHERE ex.id = ?";
+      const params = exerciseFilter === "Todos" ? [] : [exerciseFilter];
       const rows = await (db as any).getAllAsync?.(
         `SELECT 
            ws.id, ws.exerciseId, ws.date,
@@ -63,8 +101,8 @@ export default function StatisticsScreen() {
          ${where}
          ORDER BY ws.totalLoad DESC
          LIMIT 30;`,
-         params
-      )
+        params
+      );
       const arr = (rows ?? []).map((r: any, idx: number) => ({
         id: r.id,
         exerciseId: r.exerciseId,
@@ -80,185 +118,274 @@ export default function StatisticsScreen() {
         weight: Number(r.weight ?? 0),
         restTime: Number(r.restTime ?? 80),
         totalLoad: Number(r.totalLoad ?? 0),
-      }))
-      setRecords(arr)
+      }));
+      setRecords(arr);
     } catch (e) {
-      setError('Não foi possível carregar estatísticas.')
+      setError("Não foi possível carregar estatísticas.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
     async function init() {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
-        ensureExercisesDb()
-        const exs = await getAllExercises()
-        const exerciseList = exs.map(e => ({id: e.id, title: e.title})).sort((a, b) => a.title.localeCompare(b.title))
-        const allExercises = [{id: 'Todos', title: 'Todos'}, ...exerciseList]
-        setExercises(allExercises)
-        setFilteredExercises(allExercises)
-        setSearchText('Todos')
-        await fetchRecords(selectedExercise)
+        ensureExercisesDb();
+        const exs = await getAllExercises();
+        const exerciseList = exs
+          .map((e) => ({ id: e.id, title: e.title }))
+          .sort((a, b) => a.title.localeCompare(b.title));
+        const allExercises = [{ id: "Todos", title: "Todos" }, ...exerciseList];
+        setExercises(allExercises);
+        setFilteredExercises(allExercises);
+        setSearchText("Todos");
+        await fetchRecords(selectedExercise);
       } catch (e) {
-        setError('Não foi possível carregar estatísticas e tipos.')
+        setError("Não foi possível carregar estatísticas e tipos.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    init()
-  }, [])
+    init();
+  }, []);
 
   useEffect(() => {
-    fetchRecords(selectedExercise)
-  }, [selectedExercise])
+    fetchRecords(selectedExercise);
+  }, [selectedExercise]);
 
   // Função para filtrar exercícios baseado no texto de busca
   const handleSearchChange = (text: string) => {
-    setSearchText(text)
-    if (text.trim() === '') {
-      setFilteredExercises(exercises)
+    setSearchText(text);
+    if (text.trim() === "") {
+      setFilteredExercises(exercises);
     } else {
-      const filtered = exercises.filter(ex => 
+      const filtered = exercises.filter((ex) =>
         ex.title.toLowerCase().includes(text.toLowerCase())
-      )
-      setFilteredExercises(filtered)
+      );
+      setFilteredExercises(filtered);
     }
-    setShowDropdown(true)
-  }
+    setShowDropdown(true);
+  };
 
   // Função para selecionar um exercício
-  const handleSelectExercise = (exercise: {id: string, title: string}) => {
-    setSelectedExercise(exercise.id)
-    setSelectedExerciseTitle(exercise.title)
-    setSearchText(exercise.title)
-    setShowDropdown(false)
-  }
+  const handleSelectExercise = (exercise: { id: string; title: string }) => {
+    setSelectedExercise(exercise.id);
+    setSelectedExerciseTitle(exercise.title);
+    setSearchText(exercise.title);
+    setShowDropdown(false);
+  };
 
-  const secondLoad = records.length > 1 ? records[1].totalLoad : 0
-  const firstImprovementPct = records.length > 1 && secondLoad > 0
-    ? Math.round(((records[0].totalLoad - secondLoad) / secondLoad) * 1000) / 10 // 0.1% precision
-    : null
+  const secondLoad = records.length > 1 ? records[1].totalLoad : 0;
+  const firstImprovementPct =
+    records.length > 1 && secondLoad > 0
+      ? Math.round(((records[0].totalLoad - secondLoad) / secondLoad) * 1000) /
+        10 // 0.1% precision
+      : null;
 
   return (
     <View style={{ flex: 1 }}>
       <ParallaxScrollView
-        headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
+        headerBackgroundColor={{ light: "#0F172A", dark: "#0F172A" }}
         headerImage={<ThemedView style={{ height: 1 }} />}
         contentStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}
       >
         <ThemedView style={styles.section}>
           <ThemedText type="title">Top 30 Recordes de exercício</ThemedText>
-          <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">Ordenado por peso total puxado</ThemedText>
+          <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">
+            Ordenado por peso total puxado
+          </ThemedText>
         </ThemedView>
 
         {/* Filtros e ações */}
-      <View style={styles.filtersRow}>
-        <View style={styles.autocompleteContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Selecione um exercício..."
-            placeholderTextColor="#9CA3AF"
-            value={searchText}
-            onChangeText={handleSearchChange}
-            onBlur={() => setShowDropdown(false)}
-            onFocus={() => {
-              setShowDropdown(true)
-              if (searchText === selectedExerciseTitle) {
-                setSearchText('')
-                setFilteredExercises(exercises)
-              }
-            }}
-          />
-          {showDropdown && (
-             <View style={styles.dropdown}>
-               <ScrollView
-                 style={styles.dropdownList}
-                 keyboardShouldPersistTaps="handled"
-               >
-                 {filteredExercises.map((item) => (
-                   <Pressable
-                     key={item.id}
-                     style={[styles.dropdownItem, selectedExercise === item.id && styles.dropdownItemSelected]}
-                     onPress={() => handleSelectExercise(item)}
-                   >
-                     <ThemedText style={[styles.dropdownText, selectedExercise === item.id && styles.dropdownTextSelected]}>
-                       {item.title}
-                     </ThemedText>
-                   </Pressable>
-                 ))}
-               </ScrollView>
-             </View>
-           )}
+        <View style={styles.filtersRow}>
+          <View style={styles.autocompleteContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Selecione um exercício..."
+              placeholderTextColor="#9CA3AF"
+              value={searchText}
+              onChangeText={handleSearchChange}
+              onBlur={() => setShowDropdown(false)}
+              onFocus={() => {
+                setShowDropdown(true);
+                if (searchText === selectedExerciseTitle) {
+                  setSearchText("");
+                  setFilteredExercises(exercises);
+                }
+              }}
+            />
+            {showDropdown && (
+              <View style={styles.dropdown}>
+                <ScrollView
+                  style={styles.dropdownList}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {filteredExercises.map((item) => (
+                    <Pressable
+                      key={item.id}
+                      style={[
+                        styles.dropdownItem,
+                        selectedExercise === item.id &&
+                          styles.dropdownItemSelected,
+                      ]}
+                      onPress={() => handleSelectExercise(item)}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.dropdownText,
+                          selectedExercise === item.id &&
+                            styles.dropdownTextSelected,
+                        ]}
+                      >
+                        {item.title}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+          <Pressable
+            onPress={() => fetchRecords(selectedExercise)}
+            style={styles.reloadButton}
+          >
+            <ThemedText style={styles.reloadText}>Recarregar</ThemedText>
+          </Pressable>
         </View>
-        <Pressable onPress={() => fetchRecords(selectedExercise)} style={styles.reloadButton}>
-          <ThemedText style={styles.reloadText}>Recarregar</ThemedText>
-        </Pressable>
-      </View>
 
-      {loading && (
-        <View style={[styles.row, { alignItems: 'center' }] }>
-          <ActivityIndicator />
-          <ThemedText style={{ marginLeft: 8 }}>Carregando...</ThemedText>
-        </View>
-      )}
+        {loading && (
+          <View style={[styles.row, { alignItems: "center" }]}>
+            <ActivityIndicator />
+            <ThemedText style={{ marginLeft: 8 }}>Carregando...</ThemedText>
+          </View>
+        )}
 
-      {!!error && (
-        <ThemedText style={{ color: '#EF4444' }}>{error}</ThemedText>
-      )}
+        {!!error && (
+          <ThemedText style={{ color: "#EF4444" }}>{error}</ThemedText>
+        )}
 
-      {!loading && !error && records.length === 0 && (
-        <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">Nenhuma sessão registrada para este filtro.</ThemedText>
-      )}
+        {!loading && !error && records.length === 0 && (
+          <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">
+            Nenhuma sessão registrada para este filtro.
+          </ThemedText>
+        )}
 
-      {!loading && !error && records.length > 0 && (
-        <View style={{ gap: 12 }}>
-          {records.map((rec, idx) => {
-            const next = records[idx + 1];
-            const improvementPct = next && next.totalLoad > 0
-              ? Math.round(((rec.totalLoad - next.totalLoad) / next.totalLoad) * 1000) / 10
-              : null;
-            return (
-              <ThemedView key={rec.id} style={styles.recordCard}>
-                <View style={styles.recordHeader}>
-                  <ThemedText style={styles.rankText}>#{rec.rank}</ThemedText>
-                  <ThemedText type="defaultSemiBold">{rec.exerciseTitle}</ThemedText>
-                </View>
-                <View style={{ gap: 4 }}>
-                  <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">Data: {rec.date.toLocaleDateString()}</ThemedText>
-                  <View style={styles.row}>
-                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Repetições completas: {rec.completeReps}</ThemedText>
-                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF"> · Séries: {rec.sets}</ThemedText>
+        {!loading && !error && records.length > 0 && (
+          <View style={{ gap: 12 }}>
+            {records.map((rec, idx) => {
+              const next = records[idx + 1];
+              const improvementPct =
+                next && next.totalLoad > 0
+                  ? Math.round(
+                      ((rec.totalLoad - next.totalLoad) / next.totalLoad) * 1000
+                    ) / 10
+                  : null;
+              return (
+                <ThemedView key={rec.id} style={styles.recordCard}>
+                  {/* Header com rank e título */}
+                  <View style={styles.cardHeader}>
+                    <View style={styles.rankBadge}>
+                      <ThemedText style={styles.rankNumber}>
+                        #{rec.rank}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.headerContent}>
+                      <ThemedText
+                        type="defaultSemiBold"
+                        style={styles.exerciseTitle}
+                      >
+                        {rec.exerciseTitle}
+                      </ThemedText>
+                      <ThemedText style={styles.dateText}>
+                        {rec.date.toLocaleDateString("pt-BR")}
+                      </ThemedText>
+                    </View>
                   </View>
-                  <View style={styles.totalRow}>
-                    <ThemedText style={styles.totalLabel}>Peso total puxado</ThemedText>
-                    <ThemedText style={styles.totalValue}>{rec.totalLoad} kg</ThemedText>
+
+                  {/* Métricas principais em grid */}
+                  <View style={styles.metricsGrid}>
+                    <View style={styles.metricItem}>
+                      <ThemedText style={styles.metricValue}>
+                        {rec.totalLoad}
+                      </ThemedText>
+                      <ThemedText style={styles.metricLabel}>
+                        kg total
+                      </ThemedText>
+                    </View>
+                    <View style={styles.metricItem}>
+                      <ThemedText style={styles.metricValue}>
+                        {rec.completeReps}
+                      </ThemedText>
+                      <ThemedText style={styles.metricLabel}>reps</ThemedText>
+                    </View>
+                    <View style={styles.metricItem}>
+                      <ThemedText style={styles.metricValue}>
+                        {rec.sets}
+                      </ThemedText>
+                      <ThemedText style={styles.metricLabel}>séries</ThemedText>
+                    </View>
+                    <View style={styles.metricItem}>
+                      <ThemedText style={styles.metricValue}>
+                        {rec.weight}
+                      </ThemedText>
+                      <ThemedText style={styles.metricLabel}>
+                        kg/carga
+                      </ThemedText>
+                    </View>
                   </View>
+
+                  {/* Métricas secundárias */}
+                  <View style={styles.secondaryMetrics}>
+                    <View style={styles.secondaryMetric}>
+                      <ThemedText style={styles.secondaryLabel}>
+                        Negativas:
+                      </ThemedText>
+                      <ThemedText style={styles.secondaryValue}>
+                        {rec.negativeReps || 0}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.secondaryMetric}>
+                      <ThemedText style={styles.secondaryLabel}>
+                        Falhas:
+                      </ThemedText>
+                      <ThemedText style={styles.secondaryValue}>
+                        {rec.failedReps || 0}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.secondaryMetric}>
+                      <ThemedText style={styles.secondaryLabel}>
+                        Descanso:
+                      </ThemedText>
+                      <ThemedText style={styles.secondaryValue}>
+                        {rec.restTime}s
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {/* Melhoria em relação ao próximo */}
                   {improvementPct !== null && (
-                    <ThemedText style={styles.improvementText}>
-                      {improvementPct}% melhor que o #{rec.rank + 1} lugar
-                    </ThemedText>
+                    <View style={styles.improvementBadge}>
+                      <ThemedText style={styles.improvementText}>
+                        ↑ {improvementPct}% melhor que #{rec.rank + 1}
+                      </ThemedText>
+                    </View>
                   )}
-                </View>
-                <View style={styles.cardActions}>
-                  <TouchableOpacity style={styles.editButton} onPress={() => {
-                    setEditingRecord(rec)
-                    setEditForm({
-                      completeReps: rec.completeReps,
-                      negativeReps: rec.negativeReps ?? 0,
-                      failedReps: rec.failedReps ?? 0,
-                      sets: rec.sets,
-                      weight: rec.weight ?? 0,
-                      restTime: rec.restTime ?? 80,
-                    })
-                    setEditWeightInput(String(rec.weight ?? 0))
-                    setIsEditModalVisible(true)
-                  }}>
-                    <ThemedText style={styles.editButtonText}>Editar</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.deleteButton} onPress={() => {
+
+                  {/* Ações */}
+                  <View style={styles.cardActions}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => {
+                        /* ... */
+                      }}
+                    >
+                      <ThemedText style={styles.editButtonText}>
+                        Editar
+                      </ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.deleteButton} onPress={() => {
                     Alert.alert('Confirmar', 'Deseja excluir esta sessão?', [
                       { text: 'Cancelar', style: 'cancel' },
                       { text: 'Excluir', style: 'destructive', onPress: async () => {
@@ -271,152 +398,257 @@ export default function StatisticsScreen() {
                       } },
                     ])
                   }}>
-                    <ThemedText style={styles.deleteButtonText}>Excluir</ThemedText>
-                  </TouchableOpacity>
-                </View>
-              </ThemedView>
-            );
-          })}
-        </View>
-      )}
+                      <ThemedText style={styles.deleteButtonText}>
+                        Excluir
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </ThemedView>
+              );
+            })}
+          </View>
+        )}
       </ParallaxScrollView>
- 
+
       {/* Modal de edição */}
       <Modal visible={isEditModalVisible} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
           <ThemedView style={styles.modalCard}>
-            <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">Editar sessão</ThemedText>
- 
+            <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">
+              Editar sessão
+            </ThemedText>
+
             {editingRecord && (
               <>
-                <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">{editingRecord.exerciseTitle} · {editingRecord.date.toLocaleDateString()}</ThemedText>
- 
+                <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">
+                  {editingRecord.exerciseTitle} ·{" "}
+                  {editingRecord.date.toLocaleDateString()}
+                </ThemedText>
+
                 <View style={styles.field}>
-                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Repetições completas</ThemedText>
+                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">
+                    Repetições completas
+                  </ThemedText>
                   <TextInput
                     style={styles.input}
                     placeholder="0"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="numeric"
                     value={String(editForm.completeReps ?? 0)}
-                    onChangeText={(t) => setEditForm((p) => ({ ...p, completeReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                    onChangeText={(t) =>
+                      setEditForm((p) => ({
+                        ...p,
+                        completeReps: Number(t.replace(/\D/g, "")) || 0,
+                      }))
+                    }
                   />
                 </View>
- 
+
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Negativas</ThemedText>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">
+                      Negativas
+                    </ThemedText>
                     <TextInput
                       style={styles.input}
                       placeholder="0"
                       placeholderTextColor="#9CA3AF"
                       keyboardType="numeric"
                       value={String(editForm.negativeReps ?? 0)}
-                      onChangeText={(t) => setEditForm((p) => ({ ...p, negativeReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                      onChangeText={(t) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          negativeReps: Number(t.replace(/\D/g, "")) || 0,
+                        }))
+                      }
                     />
                   </View>
                   <View style={[styles.field, { flex: 1 }]}>
-                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Falhas</ThemedText>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">
+                      Falhas
+                    </ThemedText>
                     <TextInput
                       style={styles.input}
                       placeholder="0"
                       placeholderTextColor="#9CA3AF"
                       keyboardType="numeric"
                       value={String(editForm.failedReps ?? 0)}
-                      onChangeText={(t) => setEditForm((p) => ({ ...p, failedReps: Number(t.replace(/\D/g, '')) || 0 }))}
+                      onChangeText={(t) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          failedReps: Number(t.replace(/\D/g, "")) || 0,
+                        }))
+                      }
                     />
                   </View>
                 </View>
 
                 <View style={styles.row}>
                   <View style={[styles.field, { flex: 1 }]}>
-                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Séries</ThemedText>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">
+                      Séries
+                    </ThemedText>
                     <TextInput
                       style={styles.input}
                       placeholder="0"
                       placeholderTextColor="#9CA3AF"
                       keyboardType="numeric"
                       value={String(editForm.sets ?? 0)}
-                      onChangeText={(t) => setEditForm((p) => ({ ...p, sets: Number(t.replace(/\D/g, '')) || 0 }))}
+                      onChangeText={(t) =>
+                        setEditForm((p) => ({
+                          ...p,
+                          sets: Number(t.replace(/\D/g, "")) || 0,
+                        }))
+                      }
                     />
                   </View>
                   <View style={[styles.field, { flex: 1 }]}>
-                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Peso (kg)</ThemedText>
+                    <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">
+                      Peso (kg)
+                    </ThemedText>
                     <TextInput
                       style={styles.input}
                       placeholder="0"
                       placeholderTextColor="#9CA3AF"
-                      keyboardType={Platform.OS === 'ios' ? 'decimal-pad' : 'numeric'}
+                      keyboardType={
+                        Platform.OS === "ios" ? "decimal-pad" : "numeric"
+                      }
                       value={editWeightInput}
                       onChangeText={(t) => {
-                        let normalized = t.replace(',', '.').replace(/[^0-9.]/g, '');
-                        const dotIndex = normalized.indexOf('.');
+                        let normalized = t
+                          .replace(",", ".")
+                          .replace(/[^0-9.]/g, "");
+                        const dotIndex = normalized.indexOf(".");
                         if (dotIndex !== -1) {
-                          normalized = normalized.slice(0, dotIndex + 1) + normalized.slice(dotIndex + 1).replace(/\./g, '');
+                          normalized =
+                            normalized.slice(0, dotIndex + 1) +
+                            normalized.slice(dotIndex + 1).replace(/\./g, "");
                         }
-                        if (normalized.startsWith('.')) normalized = '0' + normalized;
+                        if (normalized.startsWith("."))
+                          normalized = "0" + normalized;
                         setEditWeightInput(normalized);
-                        setEditForm((p) => ({ ...p, weight: normalized === '' || normalized === '.' ? 0 : parseFloat(normalized) }));
+                        setEditForm((p) => ({
+                          ...p,
+                          weight:
+                            normalized === "" || normalized === "."
+                              ? 0
+                              : parseFloat(normalized),
+                        }));
                       }}
                     />
                   </View>
                 </View>
 
                 <View style={styles.field}>
-                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Descanso (s)</ThemedText>
+                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">
+                    Descanso (s)
+                  </ThemedText>
                   <TextInput
                     style={styles.input}
                     placeholder="80"
                     placeholderTextColor="#9CA3AF"
                     keyboardType="numeric"
                     value={String(editForm.restTime ?? 80)}
-                    onChangeText={(t) => setEditForm((p) => ({ ...p, restTime: Number(t.replace(/\D/g, '')) || 80 }))}
+                    onChangeText={(t) =>
+                      setEditForm((p) => ({
+                        ...p,
+                        restTime: Number(t.replace(/\D/g, "")) || 80,
+                      }))
+                    }
                   />
                 </View>
 
                 {/* Prévia do totalLoad */}
                 <ThemedView style={styles.previewCard}>
-                  <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF" style={{ fontWeight: '700' }}>Prévia da carga total</ThemedText>
-                  <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">
+                  <ThemedText
+                    lightColor="#FFFFFF"
+                    darkColor="#FFFFFF"
+                    style={{ fontWeight: "700" }}
+                  >
+                    Prévia da carga total
+                  </ThemedText>
+                  <ThemedText
+                    type="title"
+                    lightColor="#FFFFFF"
+                    darkColor="#FFFFFF"
+                  >
                     {(() => {
-                      const ex = { id: editingRecord.exerciseId, title: editingRecord.exerciseTitle, type: editingRecord.exerciseType, bodyweightPercentage: editingRecord.exerciseBodyweightPercentage, description: undefined, youtubeLink: undefined, imageUri: undefined, createdAt: new Date(), updatedAt: new Date() } as any
-                      return calculateTotalLoad(ex, editForm)
-                    })()} kg
+                      const ex = {
+                        id: editingRecord.exerciseId,
+                        title: editingRecord.exerciseTitle,
+                        type: editingRecord.exerciseType,
+                        bodyweightPercentage:
+                          editingRecord.exerciseBodyweightPercentage,
+                        description: undefined,
+                        youtubeLink: undefined,
+                        imageUri: undefined,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                      } as any;
+                      return calculateTotalLoad(ex, editForm);
+                    })()}{" "}
+                    kg
                   </ThemedText>
                 </ThemedView>
 
                 <View style={styles.modalActions}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditModalVisible(false)} disabled={savingEdit}>
-                    <ThemedText style={styles.cancelButtonText}>Cancelar</ThemedText>
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => setIsEditModalVisible(false)}
+                    disabled={savingEdit}
+                  >
+                    <ThemedText style={styles.cancelButtonText}>
+                      Cancelar
+                    </ThemedText>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={async () => {
-                    if (!editingRecord) return
-                    try {
-                      setSavingEdit(true)
-                      const ex = { id: editingRecord.exerciseId, title: editingRecord.exerciseTitle, type: editingRecord.exerciseType, bodyweightPercentage: editingRecord.exerciseBodyweightPercentage, description: undefined, youtubeLink: undefined, imageUri: undefined, createdAt: new Date(), updatedAt: new Date() } as any
-                      const newTotal = calculateTotalLoad(ex, editForm)
-                      await (db as any).runAsync?.(
-                        `UPDATE workout_sessions SET completeReps = ?, negativeReps = ?, failedReps = ?, sets = ?, weight = ?, restTime = ?, totalLoad = ? WHERE id = ?;`,
-                        [
-                          Math.max(0, editForm.completeReps || 0),
-                          Math.max(0, editForm.negativeReps || 0),
-                          Math.max(0, editForm.failedReps || 0),
-                          Math.max(1, editForm.sets || 1),
-                          editForm.weight || 0,
-                          editForm.restTime || 80,
-                          newTotal,
-                          editingRecord.id,
-                        ]
-                      )
-                      setIsEditModalVisible(false)
-                      setSavingEdit(false)
-                      await fetchRecords(selectedExercise)
-                    } catch (e) {
-                      setSavingEdit(false)
-                      Alert.alert('Erro', 'Não foi possível salvar alterações.')
-                    }
-                  }} disabled={savingEdit}>
-                    <ThemedText style={styles.saveButtonText}>{savingEdit ? 'Salvando...' : 'Salvar'}</ThemedText>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={async () => {
+                      if (!editingRecord) return;
+                      try {
+                        setSavingEdit(true);
+                        const ex = {
+                          id: editingRecord.exerciseId,
+                          title: editingRecord.exerciseTitle,
+                          type: editingRecord.exerciseType,
+                          bodyweightPercentage:
+                            editingRecord.exerciseBodyweightPercentage,
+                          description: undefined,
+                          youtubeLink: undefined,
+                          imageUri: undefined,
+                          createdAt: new Date(),
+                          updatedAt: new Date(),
+                        } as any;
+                        const newTotal = calculateTotalLoad(ex, editForm);
+                        await (db as any).runAsync?.(
+                          `UPDATE workout_sessions SET completeReps = ?, negativeReps = ?, failedReps = ?, sets = ?, weight = ?, restTime = ?, totalLoad = ? WHERE id = ?;`,
+                          [
+                            Math.max(0, editForm.completeReps || 0),
+                            Math.max(0, editForm.negativeReps || 0),
+                            Math.max(0, editForm.failedReps || 0),
+                            Math.max(1, editForm.sets || 1),
+                            editForm.weight || 0,
+                            editForm.restTime || 80,
+                            newTotal,
+                            editingRecord.id,
+                          ]
+                        );
+                        setIsEditModalVisible(false);
+                        setSavingEdit(false);
+                        await fetchRecords(selectedExercise);
+                      } catch (e) {
+                        setSavingEdit(false);
+                        Alert.alert(
+                          "Erro",
+                          "Não foi possível salvar alterações."
+                        );
+                      }
+                    }}
+                    disabled={savingEdit}
+                  >
+                    <ThemedText style={styles.saveButtonText}>
+                      {savingEdit ? "Salvando..." : "Salvar"}
+                    </ThemedText>
                   </TouchableOpacity>
                 </View>
               </>
@@ -425,7 +657,7 @@ export default function StatisticsScreen() {
         </View>
       </Modal>
     </View>
-   )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -434,42 +666,42 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   filtersRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     marginBottom: 16,
     gap: 12,
   },
   autocompleteContainer: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
     zIndex: 1000,
   },
   searchInput: {
     height: 40,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     fontSize: 16,
-    color: '#374151',
+    color: "#374151",
   },
   dropdown: {
-    position: 'absolute',
+    position: "absolute",
     top: 42,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: 8,
     maxHeight: 200,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -486,107 +718,106 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: "#F3F4F6",
   },
   dropdownItemSelected: {
-    backgroundColor: '#EBF4FF',
+    backgroundColor: "#EBF4FF",
   },
   dropdownText: {
     fontSize: 16,
-    color: '#374151',
+    color: "#374151",
   },
   dropdownTextSelected: {
-    color: '#3B82F6',
-    fontWeight: '600',
+    color: "#3B82F6",
+    fontWeight: "600",
   },
   reloadButton: {
     borderWidth: 1,
-    borderColor: '#1F2937',
+    borderColor: "#1F2937",
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)'
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
   reloadText: {
-    color: '#FFFFFF',
-    fontWeight: '600'
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   recordCard: {
     borderWidth: 1,
-    borderColor: '#1F2937',
+    borderColor: "#1F2937",
     borderRadius: 12,
     padding: 14,
-    backgroundColor: 'rgba(37, 99, 235, 0.08)'
+    backgroundColor: "rgba(37, 99, 235, 0.08)",
   },
   recordHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 6,
   },
   rankText: {
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     marginTop: 6,
   },
   totalLabel: {
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   totalValue: {
-    color: Colors['light'].tint,
-    fontWeight: '700',
+    color: Colors["light"].tint,
+    fontWeight: "700",
     fontSize: 18,
   },
   improvementText: {
-    color: '#10B981',
+    color: "#10B981",
     marginTop: 6,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cardActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 10,
   },
   editButton: {
-    backgroundColor: '#1F2937',
+    backgroundColor: "#1F2937",
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: "#374151",
   },
   editButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   deleteButton: {
-    backgroundColor: 'rgba(239,68,68,0.12)',
+    backgroundColor: "rgba(239,68,68,0.12)",
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: "#EF4444",
   },
   deleteButtonText: {
-    color: '#EF4444',
-    fontWeight: '700',
+    color: "#EF4444",
+    fontWeight: "700",
   },
   // Estilos do modal de edição
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
     padding: 20,
   },
   modalCard: {
     borderRadius: 12,
     padding: 16,
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
     gap: 12,
   },
   field: {
@@ -594,17 +825,17 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#1F2937',
+    borderColor: "#1F2937",
     borderRadius: 8,
     padding: 12,
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    color: '#FFFFFF'
+    backgroundColor: "rgba(255,255,255,0.06)",
+    color: "#FFFFFF",
   },
   modalActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
     marginTop: 6,
   },
   cancelButton: {
@@ -612,26 +843,112 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1F2937',
+    borderColor: "#1F2937",
   },
   cancelButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   saveButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: "#10B981",
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
   },
   saveButtonText: {
-    color: '#00110A',
-    fontWeight: '700',
+    color: "#00110A",
+    fontWeight: "700",
   },
   previewCard: {
     borderWidth: 1,
-    borderColor: '#1F2937',
+    borderColor: "#1F2937",
     borderRadius: 12,
     padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.08)'
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-})
+  metricsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    gap: 8,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 12,
+  },
+  rankBadge: {
+    backgroundColor: Colors["light"].tint,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 40,
+    alignItems: "center",
+  },
+  rankNumber: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 14,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  exerciseTitle: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  dateText: {
+    color: "#9CA3AF",
+    fontSize: 12,
+  },
+  metricItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  metricValue: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+
+  metricLabel: {
+    color: "#9CA3AF",
+    fontSize: 11,
+    textAlign: "center",
+  },
+  secondaryMetrics: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
+
+  secondaryMetric: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  secondaryLabel: {
+    color: "#9CA3AF",
+    fontSize: 12,
+  },
+
+  secondaryValue: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  improvementBadge: {
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
+    borderWidth: 1,
+    borderColor: "#10B981",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: "flex-start",
+    marginBottom: 12,
+  },
+});
