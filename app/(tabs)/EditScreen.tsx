@@ -39,6 +39,7 @@ export default function EditScreen() {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [nonSelectInfo, setNonSelectInfo] = useState<{ rowsAffected?: number; lastInsertRowId?: number | null } | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'json'>('json'); // Novo estado para alternar entre visualizações
+  const [isSqlModalVisible, setIsSqlModalVisible] = useState<boolean>(false);
 
   useEffect(() => {
     ensureDb();
@@ -300,27 +301,16 @@ export default function EditScreen() {
 
       <Collapsible title="Executar SQL">
         <ThemedView style={styles.sqlCard}>
-          <ThemedText type="subtitle" lightColor="#FFFFFF" darkColor="#FFFFFF" style={styles.sqlTitle}>Console SQL</ThemedText>
-          <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">Digite sua query e visualize resultados em tabela.</ThemedText>
-          <View style={[styles.field, { marginTop: 8 }] }>
-            <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Query SQL</ThemedText>
-            <TextInput
-              style={[styles.input, styles.inputMultiline]}
-              placeholder="Ex.: SELECT * FROM exercises LIMIT 20"
-              placeholderTextColor={placeholderColor}
-              value={sql}
-              onChangeText={setSql}
-              multiline
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-          <View style={[styles.row, { marginTop: 8 }]}>
-            <TouchableOpacity style={styles.primaryButton} onPress={runQuery} disabled={runningQuery}>
-              <ThemedText style={styles.primaryButtonText}>{runningQuery ? 'Executando...' : 'Executar'}</ThemedText>
+          <View style={styles.listHeaderRow}>
+            <ThemedText type="subtitle" lightColor="#FFFFFF" darkColor="#FFFFFF" style={styles.sqlTitle}>Console SQL</ThemedText>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => setIsSqlModalVisible(true)}>
+              <ThemedText style={styles.primaryButtonText}>Abrir editor</ThemedText>
             </TouchableOpacity>
+          </View>
+          <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">Edite sua query no modal e visualize os resultados abaixo.</ThemedText>
+          <View style={[styles.row, { marginTop: 8 }]}>
             <TouchableOpacity style={styles.secondaryButton} onPress={clearResults} disabled={runningQuery}>
-              <ThemedText style={styles.secondaryButtonText}>Limpar</ThemedText>
+              <ThemedText style={styles.secondaryButtonText}>Limpar resultados</ThemedText>
             </TouchableOpacity>
           </View>
           
@@ -382,23 +372,62 @@ export default function EditScreen() {
               </View>
             </ScrollView>
           )}
-          {results.length > 0 && viewMode === 'json' && (
-            <ScrollView 
-              style={styles.jsonContainer}
-              showsVerticalScrollIndicator={true}
-              nestedScrollEnabled={true}
-              scrollEnabled={true}
-            >
-              <ThemedText style={styles.jsonText} selectable>
-                {JSON.stringify(Array.isArray(results) ? results : [results], null, 2)}
-              </ThemedText>
-            </ScrollView>
-          )}
-          {results.length === 0 && !queryError && !nonSelectInfo && (
-            <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF" style={{ marginTop: 8 }}>Nenhum resultado para exibir.</ThemedText>
-          )}
+        {results.length > 0 && viewMode === 'json' && (
+          <ScrollView 
+            style={styles.jsonContainer}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            scrollEnabled={true}
+          >
+            <ThemedText style={styles.jsonText} selectable>
+              {JSON.stringify(Array.isArray(results) ? results : [results], null, 2)}
+            </ThemedText>
+          </ScrollView>
+        )}
+        {results.length === 0 && !queryError && !nonSelectInfo && (
+          <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF" style={{ marginTop: 8 }}>Nenhum resultado para exibir.</ThemedText>
+        )}
         </ThemedView>
       </Collapsible>
+
+      {/* Modal para edição de SQL */}
+      <Modal visible={isSqlModalVisible} animationType="slide" transparent>
+        <View style={styles.modalBackdrop}>
+          <ThemedView style={styles.modalCard}>
+            <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">Editor SQL</ThemedText>
+            <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF">Digite sua query abaixo e execute para ver os resultados.</ThemedText>
+
+            <View style={[styles.field, { marginTop: 8 }] }>
+              <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Query SQL</ThemedText>
+              <TextInput
+                style={[styles.input, styles.inputMultiline]}
+                placeholder="Ex.: SELECT * FROM exercises LIMIT 20"
+                placeholderTextColor={placeholderColor}
+                value={sql}
+                onChangeText={setSql}
+                multiline
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={[styles.row, { marginTop: 8 }]}>
+              <TouchableOpacity style={styles.primaryButton} onPress={runQuery} disabled={runningQuery}>
+                <ThemedText style={styles.primaryButtonText}>{runningQuery ? 'Executando...' : 'Executar'}</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryButton} onPress={clearResults} disabled={runningQuery}>
+                <ThemedText style={styles.secondaryButtonText}>Limpar</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsSqlModalVisible(false)} disabled={runningQuery}>
+                <ThemedText style={styles.cancelButtonText}>Fechar</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </ThemedView>
+        </View>
+      </Modal>
 
       <Modal visible={isModalVisible} animationType="slide" transparent>
         <View style={styles.modalBackdrop}>
