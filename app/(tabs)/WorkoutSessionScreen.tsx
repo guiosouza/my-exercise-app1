@@ -116,11 +116,7 @@ export default function WorkoutSessionScreen() {
       const title = (ex.title || "").toLowerCase();
       const desc = (ex.description || "").toLowerCase();
       const typeLabel = ex.type === "weight" ? "peso" : "peso corporal";
-      return (
-        title.includes(q) ||
-        desc.includes(q) ||
-        typeLabel.includes(q)
-      );
+      return title.includes(q) || desc.includes(q) || typeLabel.includes(q);
     });
   }, [exercises, searchQuery]);
 
@@ -162,6 +158,12 @@ export default function WorkoutSessionScreen() {
           autoCorrect={false}
           returnKeyType="search"
         />
+      </View>
+
+      <View style={styles.instructionsRow}>
+        <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">
+          Clique em um exercício para começar a treinar.
+        </ThemedText>
       </View>
 
       {loading ? (
@@ -511,5 +513,9 @@ const styles = StyleSheet.create({
     width: "100%",
     bottom: 0,
     position: "absolute",
+  },
+  instructionsRow: {
+    marginTop: 32,
+    marginBottom: 32,
   },
 });
