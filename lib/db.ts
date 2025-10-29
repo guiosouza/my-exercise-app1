@@ -181,3 +181,34 @@ export async function selectWorkoutSessionsByExercise(exerciseId: string): Promi
   );
   return (res as any)?.rows ?? [];
 }
+
+// Seleciona sessões por período (opcionalmente filtrando por exercício)
+export async function selectWorkoutSessionsBetweenDates(
+  startIso: string,
+  endIso: string,
+  exerciseId?: string
+): Promise<any[]> {
+  if (exerciseId) {
+    const rows = await (db as any).getAllAsync?.(
+      'SELECT * FROM workout_sessions WHERE exerciseId = ? AND datetime(date) BETWEEN datetime(?) AND datetime(?) ORDER BY datetime(date) ASC;',
+      [exerciseId, startIso, endIso]
+    );
+    if (rows) return rows;
+    const res = await (db as any).runAsync?.(
+      'SELECT * FROM workout_sessions WHERE exerciseId = ? AND datetime(date) BETWEEN datetime(?) AND datetime(?) ORDER BY datetime(date) ASC;',
+      [exerciseId, startIso, endIso]
+    );
+    return (res as any)?.rows ?? [];
+  }
+
+  const rows = await (db as any).getAllAsync?.(
+    'SELECT * FROM workout_sessions WHERE datetime(date) BETWEEN datetime(?) AND datetime(?) ORDER BY datetime(date) ASC;',
+    [startIso, endIso]
+  );
+  if (rows) return rows;
+  const res = await (db as any).runAsync?.(
+    'SELECT * FROM workout_sessions WHERE datetime(date) BETWEEN datetime(?) AND datetime(?) ORDER BY datetime(date) ASC;',
+    [startIso, endIso]
+  );
+  return (res as any)?.rows ?? [];
+}

@@ -1,5 +1,5 @@
 import { Exercise, WorkoutSession, WorkoutSessionFormData } from '@/types/entities';
-import { initDb, insertWorkoutSession, selectWorkoutSessionsByExercise } from '@/lib/db';
+import { initDb, insertWorkoutSession, selectWorkoutSessionsByExercise, selectWorkoutSessionsBetweenDates } from '@/lib/db';
 
 function createId(): string {
   return 'ws_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -92,5 +92,16 @@ function mapRowToWorkoutSession(row: any): WorkoutSession {
 
 export async function getSessionsByExercise(exerciseId: string): Promise<WorkoutSession[]> {
   const rows = await selectWorkoutSessionsByExercise(exerciseId);
+  return rows.map(mapRowToWorkoutSession);
+}
+
+export async function getSessionsBetweenDates(
+  start: Date,
+  end: Date,
+  exerciseId?: string
+): Promise<WorkoutSession[]> {
+  const startIso = start.toISOString();
+  const endIso = end.toISOString();
+  const rows = await selectWorkoutSessionsBetweenDates(startIso, endIso, exerciseId);
   return rows.map(mapRowToWorkoutSession);
 }

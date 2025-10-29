@@ -39,6 +39,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="ProgressScreen"
+        options={{
+          title: 'Progresso',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar" color={color} />,
+        }}
+      />
     </Tabs>
   );
 }
