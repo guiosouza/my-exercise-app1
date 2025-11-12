@@ -188,7 +188,7 @@ export default function StatisticsScreen() {
     <View style={{ flex: 1 }}>
       <ParallaxScrollView
         headerBackgroundColor={{ light: "#0F172A", dark: "#0F172A" }}
-        headerImage={<ThemedView style={{ height: 1 }} />}
+        // headerImage={<ThemedView style={{ height: 1 }} />}
         contentStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}
       >
         <ThemedView style={styles.section}>

@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { initDb } from '@/lib/db';
 import { ensureDb as ensureExercisesDb, getAllExercises } from '@/lib/exercises-repo';
 import { getSessionsBetweenDates } from '@/lib/workout-sessions-repo';
-import { initDb } from '@/lib/db';
 import type { Exercise, WorkoutSession } from '@/types/entities';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 function toISODateOnly(d: Date): string {
   return d.toISOString().split('T')[0] ?? '';
@@ -138,7 +138,7 @@ export default function ProgressScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#0F172A', dark: '#0F172A' }}
-      headerImage={<ThemedView style={{ height: 1 }} />}
+      // headerImage={<ThemedView style={{ height: 1 }} />}
       contentStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}
     >
       <ThemedView style={styles.titleContainer}>

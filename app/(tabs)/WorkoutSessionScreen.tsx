@@ -1,4 +1,3 @@
-import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -123,29 +122,21 @@ export default function WorkoutSessionScreen() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: "#0F172A", dark: "#0F172A" }}
-      headerImage={
-        <Image
-          source={require("@/assets/images/workout-session.png")}
-          style={styles.headerImage}
-        />
-      }
       contentStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 12 }}
     >
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Exercícios</ThemedText>
-      </ThemedView>
-
-      <View style={styles.reloadRow}>
         <TouchableOpacity
           onPress={reloadExercises}
           disabled={loading}
           style={styles.reloadButton}
+          accessibilityLabel="Recarregar lista de exercícios"
         >
           <ThemedText style={styles.reloadButtonText}>
             {loading ? "Recarregando..." : "Recarregar lista"}
           </ThemedText>
         </TouchableOpacity>
-      </View>
+      </ThemedView>
 
       <View style={styles.searchRow}>
         <TextInput
@@ -162,7 +153,7 @@ export default function WorkoutSessionScreen() {
 
       <View style={styles.instructionsRow}>
         <ThemedText type="title" lightColor="#FFFFFF" darkColor="#FFFFFF">
-          Clique em um exercício para começar a treinar.
+          Clique em um exercício para gravar uma sessão de treino.
         </ThemedText>
       </View>
 
@@ -404,6 +395,7 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
   },
   reactLogo: {
