@@ -28,7 +28,7 @@ export function calculateEffectiveReps(form: WorkoutSessionFormData): number {
 export function calculateTotalLoad(exercise: Exercise, form: WorkoutSessionFormData): number {
   const base = calculateEffectiveWeight(exercise, form.weight || 0);
   const effReps = calculateEffectiveReps(form);
-  const sets = Math.max(1, form.sets || 1);
+  //const sets = Math.max(1, form.sets || 1);
   const total = base * effReps;
   // arredonda para 2 casas decimais
   return Math.round(total * 100) / 100;
