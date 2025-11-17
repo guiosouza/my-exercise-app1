@@ -77,7 +77,7 @@ export default function EditScreen() {
       const list = await getAllExercises();
       setExercises(list);
     } catch (e) {
-      // noop
+      Alert.alert(e + 'Erro', 'Não foi possível carregar os exercícios.');
     } finally {
       setLoadingList(false);
     }
@@ -104,7 +104,7 @@ export default function EditScreen() {
       await reloadExercises();
     } catch (e) {
       setSaving(false);
-      Alert.alert('Erro', 'Não foi possível salvar o exercício.');
+      Alert.alert(e + 'Erro', 'Não foi possível salvar o exercício.');
     }
   }
 
