@@ -1,5 +1,5 @@
+import { initDb, insertWorkoutSession, selectWorkoutSessionsBetweenDates, selectWorkoutSessionsByExercise } from '@/lib/db';
 import { Exercise, WorkoutSession, WorkoutSessionFormData } from '@/types/entities';
-import { initDb, insertWorkoutSession, selectWorkoutSessionsByExercise, selectWorkoutSessionsBetweenDates } from '@/lib/db';
 
 function createId(): string {
   return 'ws_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -29,7 +29,7 @@ export function calculateTotalLoad(exercise: Exercise, form: WorkoutSessionFormD
   const base = calculateEffectiveWeight(exercise, form.weight || 0);
   const effReps = calculateEffectiveReps(form);
   const sets = Math.max(1, form.sets || 1);
-  const total = base * effReps * sets;
+  const total = base * effReps;
   // arredonda para 2 casas decimais
   return Math.round(total * 100) / 100;
 }
