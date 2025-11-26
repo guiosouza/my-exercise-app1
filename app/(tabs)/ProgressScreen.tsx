@@ -45,6 +45,7 @@ export default function ProgressScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [reloading, setReloading] = useState<boolean>(false);
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -78,6 +79,21 @@ export default function ProgressScreen() {
     if (!q) return exercises;
     return exercises.filter((ex) => (ex.title || '').toLowerCase().includes(q));
   }, [exercises, searchQuery]);
+
+  async function reloadExercises() {
+    try {
+      setReloading(true);
+      const list = await getAllExercises();
+      setExercises(list);
+      if (selectedExerciseId && !list.some((e) => e.id === selectedExerciseId)) {
+        setSelectedExerciseId(null);
+      }
+    } catch (e) {
+      // noop
+    } finally {
+      setReloading(false);
+    }
+  }
 
   async function runFilter() {
     try {
@@ -159,6 +175,11 @@ export default function ProgressScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+          <View style={[styles.row, { marginTop: 8, justifyContent: 'flex-end' }]}>
+            <TouchableOpacity style={styles.clearBtn} onPress={reloadExercises} disabled={reloading}>
+              <ThemedText style={{ color: '#FFFFFF' }}>{reloading ? 'Recarregando...' : 'Recarregar exercícios'}</ThemedText>
+            </TouchableOpacity>
+          </View>
           <View style={{ marginTop: 8 }}>
             {filteredExercises.slice(0, 6).map((ex) => (
               <TouchableOpacity
