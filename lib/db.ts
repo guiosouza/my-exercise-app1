@@ -133,6 +133,7 @@ export async function updateExercise(record: {
 
 // Deleta um exercício por id
 export async function deleteExerciseById(id: string): Promise<void> {
+  await db.runAsync('DELETE FROM workout_sessions WHERE exerciseId = ?;', [id]);
   await db.runAsync('DELETE FROM exercises WHERE id = ?;', [id]);
 }
 

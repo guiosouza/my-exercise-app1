@@ -83,6 +83,32 @@ export default function StatisticsScreen() {
   const [editWeightInput, setEditWeightInput] = useState<string>("0");
   const [savingEdit, setSavingEdit] = useState<boolean>(false);
 
+  async function reloadExercisesList() {
+    try {
+      setLoading(true);
+      ensureExercisesDb();
+      const exs = await getAllExercises();
+      const exerciseList = exs
+        .map((e) => ({ id: e.id, title: e.title }))
+        .sort((a, b) => a.title.localeCompare(b.title));
+      const allExercises = [{ id: "Todos", title: "Todos" }, ...exerciseList];
+      setExercises(allExercises);
+      if (searchText.trim() === "") {
+        setFilteredExercises(allExercises);
+      } else {
+        const filtered = allExercises.filter((ex) =>
+          ex.title.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setFilteredExercises(filtered);
+      }
+      setError(null);
+    } catch (e) {
+      setError("Não foi possível recarregar exercícios.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function fetchRecords(exerciseFilter: string) {
     setLoading(true);
     setError(null);
@@ -199,59 +225,69 @@ export default function StatisticsScreen() {
         </ThemedView>
 
         {/* Filtros e ações */}
-        <View style={styles.filtersRow}>
-          <View style={styles.autocompleteContainer}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Selecione um exercício..."
-              placeholderTextColor="#9CA3AF"
-              value={searchText}
-              onChangeText={handleSearchChange}
-              onBlur={() => setShowDropdown(false)}
-              onFocus={() => {
-                setShowDropdown(true);
-                if (searchText === selectedExerciseTitle) {
-                  setSearchText("");
-                  setFilteredExercises(exercises);
-                }
-              }}
-            />
-            {showDropdown && (
-              <View style={styles.dropdown}>
-                <ScrollView
-                  style={styles.dropdownList}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {filteredExercises.map((item) => (
-                    <Pressable
-                      key={item.id}
-                      style={[
-                        styles.dropdownItem,
-                        selectedExercise === item.id &&
-                          styles.dropdownItemSelected,
-                      ]}
-                      onPress={() => handleSelectExercise(item)}
-                    >
-                      <ThemedText
+        <View style={styles.filtersContainer}>
+          <View style={styles.filtersRow}>
+            <View style={styles.autocompleteContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Selecione um exercício..."
+                placeholderTextColor="#9CA3AF"
+                value={searchText}
+                onChangeText={handleSearchChange}
+                onBlur={() => setShowDropdown(false)}
+                onFocus={() => {
+                  setShowDropdown(true);
+                  if (searchText === selectedExerciseTitle) {
+                    setSearchText("");
+                    setFilteredExercises(exercises);
+                  }
+                }}
+              />
+              {showDropdown && (
+                <View style={styles.dropdown}>
+                  <ScrollView
+                    style={styles.dropdownList}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {filteredExercises.map((item) => (
+                      <Pressable
+                        key={item.id}
                         style={[
-                          styles.dropdownText,
+                          styles.dropdownItem,
                           selectedExercise === item.id &&
-                            styles.dropdownTextSelected,
+                            styles.dropdownItemSelected,
                         ]}
+                        onPress={() => handleSelectExercise(item)}
                       >
-                        {item.title}
-                      </ThemedText>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+                        <ThemedText
+                          style={[
+                            styles.dropdownText,
+                            selectedExercise === item.id &&
+                              styles.dropdownTextSelected,
+                          ]}
+                        >
+                          {item.title}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
           </View>
           <Pressable
             onPress={() => fetchRecords(selectedExercise)}
-            style={styles.reloadButton}
+            style={[styles.reloadButton, styles.fullWidthButton]}
           >
             <ThemedText style={styles.reloadText}>Recarregar</ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={reloadExercisesList}
+            style={[styles.reloadButton, styles.fullWidthButton]}
+          >
+            <ThemedText style={styles.reloadText}>
+              Recarregar exercícios
+            </ThemedText>
           </Pressable>
         </View>
 
@@ -699,9 +735,12 @@ const styles = StyleSheet.create({
   filtersRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    gap: 12,
+    justifyContent: "flex-start",
+    marginBottom: 2,
+    gap: 2,
+  },
+  filtersContainer: {
+    marginBottom: 48,
   },
   autocompleteContainer: {
     flex: 1,
@@ -769,6 +808,14 @@ const styles = StyleSheet.create({
   reloadText: {
     color: "#FFFFFF",
     fontWeight: "600",
+  },
+  actionsColumn: {
+    gap: 8,
+    flexShrink: 0,
+  },
+  fullWidthButton: {
+    alignSelf: "stretch",
+    marginTop: 8,
   },
   recordCard: {
     borderWidth: 1,

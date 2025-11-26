@@ -190,7 +190,7 @@ export default function EditScreen() {
   function handleDelete(ex: Exercise) {
     Alert.alert(
       'Confirmar exclusão',
-      `Deseja realmente excluir o exercício "${ex.title}"? Esta ação não poderá ser desfeita.`,
+      'Deseja deletar esse exercício? Qualquer registro relacionado a ele será deletado!',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -201,15 +201,8 @@ export default function EditScreen() {
               await deleteExercise(ex.id);
               Alert.alert('Excluído', 'Exercício removido com sucesso.');
               await reloadExercises();
-            } catch (e: any) {
-              const msg = e?.message || String(e);
-              const isFkFail = /FOREIGN KEY/i.test(msg) || /constraint failed/i.test(msg);
-              Alert.alert(
-                'Erro ao excluir',
-                isFkFail
-                  ? 'Este exercício está sendo utilizado em outros registros e não pode ser excluído.'
-                  : 'Não foi possível excluir o exercício.'
-              );
+            } catch {
+              Alert.alert('Erro ao excluir', 'Não foi possível excluir o exercício.');
             }
           },
         },

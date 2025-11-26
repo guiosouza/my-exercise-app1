@@ -102,9 +102,9 @@ export default function WorkoutSessionScreen() {
       setSaving(false);
       setIsModalVisible(false);
       Alert.alert("Sucesso", "Sessão de treino gravada.");
-    } catch (e) {
+    } catch (error) {
       setSaving(false);
-      Alert.alert("Erro", "Não foi possível gravar a sessão.");
+      Alert.alert("Erro", `Não foi possível gravar a sessão. Tente recarregar a lista de exercício. Eis o motivo do erro: ${error}`);
     }
   }
 
