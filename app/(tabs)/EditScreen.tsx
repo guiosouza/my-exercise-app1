@@ -5,7 +5,6 @@ import { ExerciseCard } from '@/components/exercise-card';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -23,6 +22,7 @@ export default function EditScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loadingList, setLoadingList] = useState<boolean>(false);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [form, setForm] = useState<ExerciseFormData>({
     title: '',
     description: '',
@@ -252,12 +252,25 @@ export default function EditScreen() {
       </ThemedView>
 
 
-      <Collapsible title="Exercícios">
+      <ThemedText type="subtitle" style={styles.sectionTitle}>Exercícios</ThemedText>
         <View style={styles.listHeaderRow}>
           <ThemedText style={styles.listHeaderTitle}>Lista de exercícios</ThemedText>
           <TouchableOpacity style={styles.secondaryButton} onPress={reloadExercises}>
             <ThemedText style={styles.secondaryButtonText}>Recarregar</ThemedText>
           </TouchableOpacity>
+        </View>
+        <View style={styles.field}>
+          <ThemedText lightColor="#FFFFFF" darkColor="#FFFFFF">Pesquisar</ThemedText>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex.: Flexão"
+            placeholderTextColor={placeholderColor}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
         </View>
         {loadingList ? (
           <View style={styles.loadingRow}>
@@ -266,7 +279,6 @@ export default function EditScreen() {
           </View>
         ) : (
           <View style={{ gap: 12 }}>
-            {/* Card de criar novo exercício */}
             <TouchableOpacity activeOpacity={0.9} onPress={openCreateModal}>
               <ThemedView style={styles.addCard}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -277,11 +289,12 @@ export default function EditScreen() {
               </ThemedView>
             </TouchableOpacity>
 
-            {/* Lista de exercícios */}
             {exercises.length === 0 ? (
               <ThemedText style={{ color: '#9CA3AF' }}>Nenhum exercício cadastrado.</ThemedText>
             ) : (
-              exercises.map((ex) => (
+              exercises
+                .filter((ex) => ex.title.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+                .map((ex) => (
                 <ExerciseCard
                   key={ex.id}
                   title={ex.title}
@@ -295,11 +308,14 @@ export default function EditScreen() {
                 />
               ))
             )}
+            {exercises.length > 0 && exercises.filter((ex) => ex.title.toLowerCase().includes(searchQuery.trim().toLowerCase())).length === 0 && (
+              <ThemedText style={{ color: '#9CA3AF' }}>Nenhum exercício encontrado para &quot;{searchQuery}&quot;.</ThemedText>
+            )}
           </View>
         )}
-      </Collapsible>
+      <View style={styles.divider} />
 
-      <Collapsible title="Executar SQL">
+      <ThemedText type="subtitle" style={styles.sectionTitle}>Banco de dados</ThemedText>
         <ThemedView style={styles.sqlCard}>
           <View style={styles.listHeaderRow}>
             <ThemedText type="subtitle" lightColor="#FFFFFF" darkColor="#FFFFFF" style={styles.sqlTitle}>Console SQL</ThemedText>
@@ -388,7 +404,6 @@ export default function EditScreen() {
           <ThemedText lightColor="#9CA3AF" darkColor="#9CA3AF" style={{ marginTop: 8 }}>Nenhum resultado para exibir.</ThemedText>
         )}
         </ThemedView>
-      </Collapsible>
 
       {/* Modal para edição de SQL */}
       <Modal visible={isSqlModalVisible} animationType="slide" transparent>
@@ -741,5 +756,15 @@ const styles = StyleSheet.create({
     padding: 12,
     lineHeight: 16,
     flexShrink: 0,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#1F2937',
+    marginVertical: 20,
+  },
+  sectionTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
   },
 });

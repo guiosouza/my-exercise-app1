@@ -165,7 +165,7 @@ export default function WorkoutSessionScreen() {
         </ThemedText>
       ) : filteredExercises.length === 0 ? (
         <ThemedText style={{ color: "#9CA3AF" }}>
-          Nenhum exercício encontrado para "{searchQuery}".
+          Nenhum exercício encontrado para &quot;{searchQuery}&quot;.
         </ThemedText>
       ) : (
         <View style={{ gap: 12 }}>
