@@ -42,7 +42,7 @@ export default function WorkoutSessionScreen() {
     completeReps: 0,
     negativeReps: 0,
     failedReps: 0,
-    sets: 0,
+    sets: 4,
     weight: 0,
     restTime: 80,
   });
@@ -72,7 +72,7 @@ export default function WorkoutSessionScreen() {
       completeReps: 0,
       negativeReps: 0,
       failedReps: 0,
-      sets: 0,
+      sets: 4,
       weight: 0,
       restTime: 80,
     });
